@@ -29,5 +29,7 @@
     "src/lib/components/chat/ChatMemoryControl.svelte",
     "src/lib/components/chat/TrustedFunctionIcon.svelte",
     "src/lib/components/workspace/common/TaskPresetEditor.svelte"
-  ]
+  ],
+  "branding_manifest": "downstream/branding/manifest.json",
+  "branding_id": "data-rift-v1"
 }

@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "branding_id": "data-rift-v1",
+  "assets": {
+    "apple-touch-icon.png": {
+      "bytes": 26535,
+      "height": 180,
+      "media_type": "image/png",
+      "sha256": "a447cca05dcdd5b9fcd2ce66b23e5fcc683ecbb8e95c2cd95a633e874710e8f6",
+      "width": 180
+    },
+    "favicon-96x96.png": {
+      "bytes": 10173,
+      "height": 96,
+      "media_type": "image/png",
+      "sha256": "5fe23bd4e69ddfba457bef2a61a13a3245dddd5c29758e8bb3167f65dabd5af7",
+      "width": 96
+    },
+    "favicon.ico": {
+      "bytes": 4314,
+      "height": 32,
+      "media_type": "image/x-icon",
+      "sha256": "7695409498950870d2cc93232449d73579c40dc76527d0efa3e5a6092d889dcb",
+      "width": 32
+    },
+    "favicon.png": {
+      "bytes": 117458,
+      "height": 512,
+      "media_type": "image/png",
+      "sha256": "79b460a7c569b2bcf8bdf118a52e5708a7b2f1e1fe546cb6ba9b8664c5502afe",
+      "width": 512
+    },
+    "favicon.svg": {
+      "bytes": 4623,
+      "height": 1024,
+      "media_type": "image/svg+xml",
+      "sha256": "c95714ba6e441d95d0211ce864ef5ce6b9689d509d98b92bfc55b6dce9042234",
+      "width": 1024
+    },
+    "logo.png": {
+      "bytes": 114673,
+      "height": 500,
+      "media_type": "image/png",
+      "sha256": "bbdb85d608892c4d2ce9c20ab152518c98016757bd53a2d88f91a07a2ab0189e",
+      "width": 500
+    },
+    "web-app-manifest-192x192.png": {
+      "bytes": 29204,
+      "height": 192,
+      "media_type": "image/png",
+      "sha256": "350e7fad8f9edd32e299d69b9407231865d09a7619f873027dac520d37e056ee",
+      "width": 192
+    },
+    "web-app-manifest-512x512.png": {
+      "bytes": 117458,
+      "height": 512,
+      "media_type": "image/png",
+      "sha256": "79b460a7c569b2bcf8bdf118a52e5708a7b2f1e1fe546cb6ba9b8664c5502afe",
+      "width": 512
+    }
+  }
+}
