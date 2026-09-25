@@ -716,6 +716,8 @@ async def delete_all_user_chats(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
+    from open_webui.routers import chat_memory
+    await chat_memory.delete_all_chat_memory(user.id, db)
     result = await Chats.delete_chats_by_user_id(user.id, db=db)
     if result:
         await publish_event(

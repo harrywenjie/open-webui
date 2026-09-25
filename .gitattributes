@@ -47,3 +47,6 @@
 # Misc
 *.env text eol=lf
 *.lock text eol=lf
+# Exact manifest-pinned branding bytes on every workstation.
+static/static/favicon.svg -text
+downstream/branding/*.svg -text

@@ -154,6 +154,7 @@ from open_webui.routers import (
     calendar,
     channels,
     chats,
+    chat_memory,
     configs,
     evaluations,
     files,
@@ -284,6 +285,8 @@ if SAFE_MODE:
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
+CHAT_MEMORY_ADAPTER_BUILD_ID = 'chat-memory-phase4.15'
+
 
 async def emit_chat_list_event(metadata: dict, chat_id: str):
     if not is_saved_chat_id(chat_id):
@@ -296,18 +299,28 @@ async def emit_chat_list_event(metadata: dict, chat_id: str):
 
 
 class SPAStaticFiles(StaticFiles):
+    @staticmethod
+    def apply_cache_policy(path: str, response):
+        content_type = response.headers.get('content-type', '')
+        if content_type.startswith('text/html'):
+            response.headers['Cache-Control'] = 'no-cache, must-revalidate'
+        elif path.startswith('_app/immutable/'):
+            response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
+        return response
+
     async def get_response(self, path: str, scope):
         try:
-            return await super().get_response(path, scope)
+            response = await super().get_response(path, scope)
         except (HTTPException, StarletteHTTPException) as ex:
             if ex.status_code == 404:
                 if path.endswith('.js'):
                     # Return 404 for javascript files
                     raise ex
                 else:
-                    return await super().get_response('index.html', scope)
+                    response = await super().get_response('index.html', scope)
             else:
                 raise ex
+        return self.apply_cache_policy(path, response)
 
 
 class CORSStaticFiles(StaticFiles):
@@ -859,6 +872,7 @@ app.include_router(users.router, prefix='/api/v1/users', tags=['users'])
 
 app.include_router(channels.router, prefix='/api/v1/channels', tags=['channels'])
 app.include_router(chats.router, prefix='/api/v1/chats', tags=['chats'])
+app.include_router(chat_memory.router, prefix='/api/v1/chat-memory', tags=['chat-memory'])
 app.include_router(notes.router, prefix='/api/v1/notes', tags=['notes'])
 
 
@@ -1415,6 +1429,9 @@ async def chat_completion(
                             folder_id=metadata.get('folder_id'),
                         ),
                     )
+                    # A draft OFF/READ_ONLY choice must reach Memory Core before
+                    # chat-created events or inlet/outlet filters can accept work.
+                    await chat_memory.ensure_initial_mode(user.id, chat_id, chat_variables)
                     await publish_event(
                         request,
                         EVENTS.CHAT_CREATED,
@@ -2587,7 +2604,10 @@ async def delete_event_webhook_api(webhook_id: str, user=Depends(get_admin_user)
 async def get_app_version():
     return {
         'version': VERSION,
-        'deployment_id': DEPLOYMENT_ID,
+        # Upstream versions do not identify custom frontend builds. A stable
+        # adapter build ID lets the existing reconnect lifecycle safely reload
+        # an already-running page after a guarded custom-runtime cutover.
+        'deployment_id': DEPLOYMENT_ID or CHAT_MEMORY_ADAPTER_BUILD_ID,
     }
 
 

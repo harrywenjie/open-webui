@@ -253,7 +253,7 @@ STATIC_DIR = Path(os.getenv('STATIC_DIR', OPEN_WEBUI_DIR / 'static'))
 
 FRONTEND_BUILD_DIR = Path(os.getenv('FRONTEND_BUILD_DIR', BASE_DIR / 'build')).resolve()
 
-if FROM_INIT_PY:
+if FROM_INIT_PY or (OPEN_WEBUI_DIR / 'frontend').is_dir():
     FRONTEND_BUILD_DIR = Path(os.getenv('FRONTEND_BUILD_DIR', OPEN_WEBUI_DIR / 'frontend')).resolve()
 
 ####################################

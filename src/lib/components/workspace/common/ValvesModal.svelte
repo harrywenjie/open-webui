@@ -30,6 +30,7 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Valves from '$lib/components/common/Valves.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import TaskPresetEditor from './TaskPresetEditor.svelte';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -48,8 +49,13 @@
 
 	let valvesSpec = null;
 	let valves = {};
+	let taskPresetEditor: TaskPresetEditor;
+	$: isTaskPreset = userValves && type === 'function' && id === 'qwen_custom_task_presets';
 
 	const submitHandler = async () => {
+		if (isTaskPreset && taskPresetEditor && !taskPresetEditor.prepareSubmit()) {
+			return;
+		}
 		saving = true;
 
 		if (valvesSpec) {
@@ -94,6 +100,7 @@
 			}
 
 			if (res) {
+				taskPresetEditor?.commitSucceeded();
 				toast.success($i18n.t('Valves updated successfully'));
 				dispatch('save');
 			}
@@ -130,7 +137,7 @@
 				valves = {};
 			}
 
-			if (valvesSpec) {
+			if (valvesSpec && !isTaskPreset) {
 				for (const property in valvesSpec.properties) {
 					if (valvesSpec.properties[property]?.type === 'array') {
 						if (valvesSpec.properties[property]?.input?.type === 'multiselect') {
@@ -162,7 +169,9 @@
 <Modal size="sm" bind:show>
 	<div>
 		<div class="flex justify-between dark:text-gray-100 px-4 pt-3 pb-1">
-			<div class="self-center text-sm font-medium">{$i18n.t('Valves')}</div>
+			<div class="self-center text-sm font-medium">
+				{isTaskPreset ? 'Task Preset' : $i18n.t('Valves')}
+			</div>
 			<button
 				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 				on:click={() => {
@@ -183,7 +192,16 @@
 				>
 					<div>
 						{#if !loading}
-							<Valves {valvesSpec} bind:valves meta={resourceMeta} {userValves} />
+							{#if isTaskPreset}
+								<TaskPresetEditor
+									bind:this={taskPresetEditor}
+									bind:valves
+									disabled={saving}
+									on:submit={submitHandler}
+								/>
+							{:else}
+								<Valves {valvesSpec} bind:valves meta={resourceMeta} {userValves} />
+							{/if}
 						{:else}
 							<Spinner className="size-5" />
 						{/if}
