@@ -1,9 +1,9 @@
 {
-  "adapter_version": "chat-memory-phase4.14",
+  "adapter_version": "chat-memory-phase4.15",
   "upstream": {
-    "version": "0.11.3",
-    "tag": "v0.11.3",
-    "commit": "2a960a59fe1dbbd35282f0556b3666d81102e781"
+    "version": "0.11.4",
+    "tag": "v0.11.4",
+    "commit": "8bd8b4fac5e059578ac0c74b3c18d11139f88b7d"
   },
   "repository": "https://github.com/harrywenjie/open-webui.git",
   "patched_paths": [
