@@ -72,6 +72,8 @@
 	import { createNoteHandler } from '../notes/utils';
 	import { getSuggestionRenderer } from '../common/RichTextInput/suggestions';
 
+	import ChatMemoryControl from './ChatMemoryControl.svelte';
+	import TrustedFunctionIcon from './TrustedFunctionIcon.svelte';
 	import InputMenu from './MessageInput/InputMenu.svelte';
 	import VoiceRecording from './MessageInput/VoiceRecording.svelte';
 	import ModelSelector from './ModelSelector.svelte';
@@ -221,6 +223,11 @@
 	let selectedValvesType = 'tool'; // 'tool' or 'function'
 	let selectedValvesItemId = null;
 	let integrationsMenuCloseOnOutsideClick = true;
+	let chatMemoryControl: ChatMemoryControl;
+	let chatMemoryEnabled = false;
+	let chatMemoryAvailable = false;
+	let chatMemoryPending = false;
+	let chatMemoryError = '';
 
 	$: if (!showValvesModal) {
 		integrationsMenuCloseOnOutsideClick = true;
@@ -248,6 +255,14 @@
 	};
 
 	$: onChange(chatInputDraft);
+
+	const dispatchChatSubmit = () => {
+		if (chatMemoryPending) {
+			toast.warning('Please wait for the Chat Memory setting to finish updating.');
+			return;
+		}
+		dispatch('submit', prompt);
+	};
 
 	const inputVariableHandler = async (text: string): Promise<string> => {
 		inputVariables = extractInputVariables(text);
@@ -1716,7 +1731,7 @@
 								focus({ preventScroll: true });
 
 								if ($settings?.speechAutoSend ?? false) {
-									dispatch('submit', prompt);
+									dispatchChatSubmit();
 								}
 							}}
 						/>
@@ -1724,7 +1739,7 @@
 					<form
 						class="w-full flex flex-col gap-1.5 {recording ? 'hidden' : ''}"
 						on:submit|preventDefault={() => {
-							dispatch('submit', prompt);
+							dispatchChatSubmit();
 						}}
 					>
 						<button
@@ -2118,7 +2133,7 @@
 																if (enterPressed) {
 																	e.preventDefault();
 																	if (prompt !== '' || files.length > 0) {
-																		dispatch('submit', prompt);
+																		dispatchChatSubmit();
 																	}
 																}
 															}
@@ -2276,6 +2291,11 @@
 													authType?: string | null;
 												}) => oauthRedirectHandler(tool, chatInputDraft)}
 												{onWebSearchToggle}
+												{chatMemoryAvailable}
+												{chatMemoryEnabled}
+												{chatMemoryPending}
+												{chatMemoryError}
+												onChatMemoryToggle={() => chatMemoryControl?.setEnabled(!chatMemoryEnabled)}
 												closeOnOutsideClick={integrationsMenuCloseOnOutsideClick}
 												onShowValves={(e) => {
 													const { type, id } = e;
@@ -2322,10 +2342,21 @@
 										{/if}
 
 										<div class="ml-1 flex gap-1.5 shrink-0">
-											{#if (selectedToolIds ?? []).length > 0}
+											<ChatMemoryControl
+												bind:this={chatMemoryControl}
+												{chatId}
+												available={selectedModelIds.some((id) => ($models.find((model) => model.id === id)?.info?.meta?.toolIds ?? []).includes('phase09_remember'))}
+												bind:selectedToolIds
+												bind:enabled={chatMemoryEnabled}
+												bind:availableState={chatMemoryAvailable}
+												bind:pending={chatMemoryPending}
+												bind:stateError={chatMemoryError}
+											/>
+
+											{#if (selectedToolIds ?? []).filter((id) => id !== 'phase09_remember').length > 0}
 												<Tooltip
 													content={$i18n.t('{{COUNT}} Available Tools', {
-														COUNT: (selectedToolIds ?? []).length
+														COUNT: (selectedToolIds ?? []).filter((id) => id !== 'phase09_remember').length
 													})}
 												>
 													<button
@@ -2339,7 +2370,7 @@
 														<Wrench className="size-4" strokeWidth="1.75" />
 
 														<span class="text-sm">
-															{(selectedToolIds ?? []).length}
+															{(selectedToolIds ?? []).filter((id) => id !== 'phase09_remember').length}
 														</span>
 													</button>
 												</Tooltip>
@@ -2389,7 +2420,7 @@
 																}
 															}}
 															type="button"
-															class="group p-[0.375rem] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {selectedFilterIds.includes(
+															class="ops-composer-control ops-composer-control--active group p-[0.375rem] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {selectedFilterIds.includes(
 																filterId
 															)
 																? 'text-sky-500 dark:text-sky-300 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-600/10 border border-sky-200/40 dark:border-sky-500/20'
@@ -2397,13 +2428,11 @@
 														>
 															{#if filter?.icon}
 																<div class="size-4 items-center flex justify-center">
-																	<img
+																	<TrustedFunctionIcon
 																		src={filter.icon}
-																		class="size-3.5 {filter.icon.includes('data:image/svg')
-																			? 'dark:invert-[80%]'
-																			: ''}"
-																		style="fill: currentColor;"
-																		alt={filter.name}
+																		name={filter.name}
+																		trusted={['qwen_custom_reasoning_level', 'qwen_custom_task_presets'].includes(filter.id)}
+																		className="size-3.5"
 																	/>
 																</div>
 															{:else}
@@ -2433,7 +2462,7 @@
 													<button
 														on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
 														type="button"
-														class="group p-[0.375rem] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {webSearchEnabled ||
+														class="ops-composer-control ops-composer-control--active group p-[0.375rem] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {webSearchEnabled ||
 														($settings?.webSearch ?? false) === 'always'
 															? ' text-sky-500 dark:text-sky-300 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-600/10 border border-sky-200/40 dark:border-sky-500/20'
 															: 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 '}"
@@ -2452,7 +2481,7 @@
 														on:click|preventDefault={() =>
 															(imageGenerationEnabled = !imageGenerationEnabled)}
 														type="button"
-														class="group p-[0.375rem] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {imageGenerationEnabled
+														class="ops-composer-control ops-composer-control--active group p-[0.375rem] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {imageGenerationEnabled
 															? ' text-sky-500 dark:text-sky-300 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-700/10 border border-sky-200/40 dark:border-sky-500/20'
 															: 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 '}"
 													>

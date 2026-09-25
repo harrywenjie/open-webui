@@ -1197,6 +1197,30 @@
 		if (event.chat_id === $chatId) {
 			await tick();
 			const type = event?.data?.type ?? null;
+			// Chat Memory: the Core publishes `chat_memory:evaluated` when a round's evaluation
+			// changes lifecycle state, which is the only refresh trigger the HUD has (the 4-second
+			// poll was removed with phase 5H D1). The event names the assistant message, but the HUD
+			// is not tied to one message, so re-emit it on `window` for the HUD to pick up instead of
+			// inventing a second socket listener.
+			if (type === 'chat_memory:evaluated') {
+				window.dispatchEvent(
+					new CustomEvent('chat-memory:evaluated', {
+						detail: {
+							chat_id: event.chat_id,
+							round_id: event?.data?.data?.round_id ?? null,
+							assistant_message_id: event?.data?.data?.assistant_message_id ?? event.message_id ?? null,
+							disposition: event?.data?.data?.disposition ?? null,
+							semantic_revision: event?.data?.data?.semantic_revision ?? null,
+							evaluation_revision: event?.data?.data?.evaluation_revision ?? null,
+							event_version: event?.data?.data?.event_version ?? 1,
+							phase: event?.data?.data?.phase ?? 'TERMINAL',
+							scope_generation: event?.data?.data?.scope_generation,
+							branch_generation: event?.data?.data?.branch_generation
+						}
+					})
+				);
+				return;
+			}
 			if (type === 'chat:reload') {
 				await loadChat();
 				return;
@@ -1277,19 +1301,34 @@
 				} else if (type === 'chat:outlet') {
 					// Outlet filter ran on backend — sync in-memory state
 					const outletMessages = data.messages ?? [];
+					let adopted = false;
 					for (const msg of outletMessages) {
 						if (msg?.id && history.messages[msg.id]) {
 							const existing = history.messages[msg.id];
-							if (existing.content !== msg.content) {
+							// Chat Memory: a server-side outlet can rewrite the rendered blocks without
+							// changing the text (a continued message is composed from the answer plus the
+							// new text, which the client's own segments already spell out). Comparing
+							// `content` alone then skipped the sync and the client kept rendering and
+							// saving its own segments, so the corrected single block never reached the
+							// screen. Compare `output` too and adopt the server's list.
+							const outputChanged =
+								JSON.stringify(existing.output ?? null) !==
+								JSON.stringify(msg.output ?? null);
+							if (existing.content !== msg.content || outputChanged) {
 								history.messages[msg.id] = {
 									...existing,
 									originalContent: existing.content,
 									...msg
 								};
+								adopted = true;
 							}
 						}
 					}
 					history = history;
+					// Chat Memory: this completion's own save has already run by the time the outlet
+					// result arrives, so an adopted correction has to be written back or the stored
+					// message keeps the client's own segments (measured live 2026-09-18).
+					if (adopted) await saveChatHandler($chatId, history);
 					return; // Patches history.messages directly; skip the trailing write-back.
 				} else if (type === 'chat:message:favorite') {
 					// Update message favorite status
@@ -1511,6 +1550,7 @@
 		);
 
 	const handleSocketConnect = async () => {
+		window.dispatchEvent(new CustomEvent('chat-memory:reconnected'));
 		// Gate on $chatId, not chatIdProp: chats started from the home page keep an empty chatIdProp
 		if (!$chatId || $temporaryChatEnabled) {
 			return;
@@ -3582,7 +3622,16 @@
 						$user?.email
 					)
 				},
-				...(useChatVariablesFallback ? { chat_variables: chatVariables } : {}),
+				...(useChatVariablesFallback
+					? {
+							chat_variables: {
+								...chatVariables,
+								memory_access_mode: selectedToolIds.includes('phase09_remember')
+									? chatVariables?.memory_previous_enabled_mode ?? 'NORMAL'
+									: 'OFF'
+							}
+						}
+					: {}),
 				model_item: $models.find((m) => m.id === model.id),
 
 				session_id: $socket?.id,

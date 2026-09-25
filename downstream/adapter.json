@@ -1,0 +1,33 @@
+{
+  "adapter_version": "chat-memory-phase4.14",
+  "upstream": {
+    "version": "0.11.3",
+    "tag": "v0.11.3",
+    "commit": "2a960a59fe1dbbd35282f0556b3666d81102e781"
+  },
+  "repository": "https://github.com/harrywenjie/open-webui.git",
+  "patched_paths": [
+    "backend/open_webui/env.py",
+    "backend/open_webui/main.py",
+    "backend/open_webui/routers/chats.py",
+    "backend/open_webui/utils/middleware.py",
+    "src/lib/components/chat/Chat.svelte",
+    "src/lib/components/chat/MessageInput.svelte",
+    "src/lib/components/chat/MessageInput/IntegrationsMenu.svelte",
+    "src/lib/components/workspace/common/ValvesModal.svelte"
+  ],
+  "overlay_paths": [
+    "backend/open_webui/routers/chat_memory.py",
+    "backend/open_webui/utils/chat_memory_evaluation_push.py",
+    "backend/open_webui/utils/chat_memory_liveness.py",
+    "backend/open_webui/utils/chat_memory_observation.py",
+    "backend/open_webui/utils/chat_memory_source.py",
+    "src/lib/apis/chat-memory/index.ts",
+    "src/lib/components/chat/ChatMemory/ProfileEditor.svelte",
+    "src/lib/components/chat/ChatMemory/ProfileStateNode.svelte",
+    "src/lib/components/chat/ChatMemory/ProjectionNode.svelte",
+    "src/lib/components/chat/ChatMemoryControl.svelte",
+    "src/lib/components/chat/TrustedFunctionIcon.svelte",
+    "src/lib/components/workspace/common/TaskPresetEditor.svelte"
+  ]
+}

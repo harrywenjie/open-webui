@@ -26,6 +26,7 @@
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import LinkSlash from '$lib/components/icons/LinkSlash.svelte';
+	import TrustedFunctionIcon from '../TrustedFunctionIcon.svelte';
 
 	const i18n = getContext('i18n') as any;
 
@@ -66,6 +67,11 @@
 	export let onShowValves: Function;
 	export let onClose: Function;
 	export let onWebSearchToggle: Function = () => {};
+	export let chatMemoryAvailable = false;
+	export let chatMemoryEnabled = false;
+	export let chatMemoryPending = false;
+	export let chatMemoryError = '';
+	export let onChatMemoryToggle: Function = () => {};
 	export let closeOnOutsideClick = true;
 
 	let show = false;
@@ -82,7 +88,7 @@
 	let toolRequestId = 0;
 	let skillRequestId = 0;
 
-	$: toolIds = Object.keys(tools ?? {});
+	$: toolIds = Object.keys(tools ?? {}).filter((id) => id !== 'phase09_remember');
 	$: skillIds = Object.keys(skills ?? {});
 
 	$: if (show && toolQuery !== searchedToolQuery) {
@@ -277,27 +283,53 @@
 					in:fly={{ x: -20, duration: 150 }}
 				>
 					{#if tools}
-						{#if Object.keys(tools).length > 0}
-							<button
-								class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
-								on:click={() => {
-									tab = 'tools';
-								}}
-							>
-								<Wrench />
-
-								<div class="flex items-center w-full justify-between">
-									<div class=" line-clamp-1">
-										{$i18n.t('Tools')}
-										<span class="ml-0.5 text-gray-500">{Object.keys(tools).length}</span>
+						{#if tools?.phase09_remember}
+							<Tooltip content={chatMemoryError || (chatMemoryAvailable ? 'Chat Memory' : 'Chat Memory is unavailable for this model or account')} placement="top-start">
+								<button
+									class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal rounded-xl hover:bg-gray-50/40 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-gray-800/40"
+									aria-label="Chat Memory"
+									aria-pressed={chatMemoryAvailable ? chatMemoryEnabled : undefined}
+									disabled={!chatMemoryAvailable || chatMemoryPending}
+									on:click={() => onChatMemoryToggle()}
+								>
+									<div class="flex min-w-0 flex-1 items-center gap-2">
+										<Wrench className="size-3.5" strokeWidth="1.75" />
+										<span class="truncate">Chat Memory</span>
 									</div>
+									<div class="shrink-0" inert><Switch state={chatMemoryEnabled} /></div>
+								</button>
+							</Tooltip>
+						{/if}
 
-									<div class="text-gray-500">
-										<ChevronRight />
+						{#each toolIds as toolId}
+							<button
+								class="relative flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+								aria-pressed={(tools?.[toolId]?.authenticated ?? true) ? selectedToolIds.includes(toolId) : undefined}
+								on:click={async (e) => await toggleTool(toolId, e)}
+							>
+								{#if !(tools?.[toolId]?.authenticated ?? true)}<div class="absolute inset-0 z-10 cursor-pointer rounded-xl opacity-50"></div>{/if}
+								<div class="min-w-0 flex-1">
+									<div class="flex items-center gap-2">
+										<Wrench className="size-3.5" strokeWidth="1.75" />
+										<Tooltip content={tools?.[toolId]?.description ?? ''} placement="top-start"><span class="truncate">{tools?.[toolId]?.name}</span></Tooltip>
 									</div>
 								</div>
+								{#if tools?.[toolId]?.authenticated === true && toolId.startsWith('server:mcp:')}
+									<Tooltip content={$i18n.t('Disconnect OAuth')}>
+										<button class="self-center w-fit rounded-full text-sm text-gray-600 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300" type="button" on:click={async (e) => {
+											e.stopPropagation(); e.preventDefault();
+											const parts = toolId.split(':'); const serverId = parts.at(-1) ?? toolId;
+											try { await deleteOAuthSession(localStorage.token, `mcp:${serverId}`); toast.success($i18n.t('OAuth session disconnected')); _tools.set(await getTools(localStorage.token)); selectedToolIds = selectedToolIds.filter((id) => id !== toolId); await init(); }
+											catch (err) { toast.error(err ?? $i18n.t('Failed to disconnect')); }
+										}}><LinkSlash className="size-3.5" /></button>
+									</Tooltip>
+								{/if}
+								{#if tools?.[toolId]?.has_user_valves && ($user?.role === 'admin' || ($user?.permissions?.chat?.valves ?? true))}
+									<Tooltip content={$i18n.t('Valves')}><button class="self-center w-fit rounded-full text-sm text-gray-600 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300" type="button" on:click={(e) => { e.stopPropagation(); e.preventDefault(); onShowValves({ type: 'tool', id: toolId }); }}><Knobs /></button></Tooltip>
+								{/if}
+								<div class="shrink-0" inert><Switch state={selectedToolIds.includes(toolId)} /></div>
 							</button>
-						{/if}
+						{/each}
 
 						{#if skills && Object.keys(skills).length > 0}
 							<button
@@ -345,13 +377,11 @@
 											<div class="shrink-0">
 												{#if filter?.icon}
 													<div class="size-3.5 items-center flex justify-center">
-														<img
+														<TrustedFunctionIcon
 															src={filter.icon}
-															class="size-3.5 {filter.icon.includes('data:image/svg')
-																? 'dark:invert-[80%]'
-																: ''}"
-															style="fill: currentColor;"
-															alt={filter.name}
+															name={filter.name}
+															trusted={['qwen_custom_reasoning_level', 'qwen_custom_task_presets'].includes(filter.id)}
+															className="size-3.5"
 														/>
 													</div>
 												{:else}

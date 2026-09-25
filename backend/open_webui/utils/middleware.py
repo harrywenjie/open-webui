@@ -3868,6 +3868,24 @@ async def background_tasks_handler(ctx):
                 messages=messages,
             )
 
+        # The outlet and all completion/background persistence have now
+        # finished. Announce only the identity of a durable complete source;
+        # the memory service re-reads and hash-verifies the authoritative chat.
+        if message and bool(message.get('done')) and not bool(message.get('error')):
+            await publish_event(
+                request,
+                EVENTS.MESSAGE_UPDATED,
+                actor=user,
+                subject_id=metadata['chat_id'],
+                subject_type='chat',
+                data={
+                    'chat_id': metadata['chat_id'],
+                    'assistant_message_id': metadata['message_id'],
+                    'chat_memory_source_finalized': True,
+                },
+                message='Chat source finalized',
+            )
+
 
 async def outlet_filter_handler(ctx):
     """Run outlet filters inline after chat completion.
@@ -4018,6 +4036,26 @@ async def outlet_filter_handler(ctx):
                                 outlet_message_id,
                                 message_update,
                             )
+
+            # The outlet chain and every write above have finished, so announce the
+            # completed assistant turn. This runs for every completion; the
+            # background-task publish below only runs when the client asks for
+            # title/tag generation, i.e. on a chat's first turn, which left every
+            # later turn and every continuation invisible to the memory service.
+            if message_id and chat_id:
+                await publish_event(
+                    request,
+                    EVENTS.MESSAGE_UPDATED,
+                    actor=user,
+                    subject_id=chat_id,
+                    subject_type='chat',
+                    data={
+                        'chat_id': chat_id,
+                        'assistant_message_id': message_id,
+                        'chat_memory_source_finalized': True,
+                    },
+                    message='Chat source finalized',
+                )
 
             if event_emitter:
                 await event_emitter(
