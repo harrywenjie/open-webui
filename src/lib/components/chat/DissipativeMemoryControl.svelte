@@ -798,6 +798,13 @@
       {:else if status.state === "Loading"}
         <div class="rounded-xl border border-gray-200 p-3 text-sm text-gray-500 dark:border-gray-700">Loading current chat…</div>
       {:else if view === "overview"}
+        {#if status.coverage?.summary}
+          <section class="mb-3 rounded-xl border border-gray-200 p-3 text-xs dark:border-gray-700" data-testid="dissipative-coverage">
+            <h3 class="mb-1 text-sm font-semibold">Processing coverage</h3>
+            <p>{status.coverage.summary}</p>
+            <p class="mt-1 ops-muted">Current chat and branch only. Stored rounds do not imply complete recall; source validity is checked when evidence is used.</p>
+          </section>
+        {/if}
         {#if status.observation?.state === "FAILED"}
           <div class="ops-memory-alert ops-memory-alert--warning mb-3 rounded-xl border p-3 text-sm" role="status" data-testid="dissipative-observation-warning">
             <strong class="block">Latest response was not recorded</strong>

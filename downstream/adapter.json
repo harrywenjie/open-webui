@@ -1,5 +1,5 @@
 {
-  "adapter_version": "dissipative-adapter-4.18",
+  "adapter_version": "dissipative-adapter-4.19",
   "upstream": {
     "version": "0.11.4",
     "tag": "v0.11.4",

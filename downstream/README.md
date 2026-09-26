@@ -8,7 +8,7 @@ Upgrades merge a fixed upstream release into a new branch, resolve conflicts, ru
 
 The Dissipative repository carries machine-generated patch/overlay exports for offline qualification. They are not editable sources; changes start in this fork and are exported from a pinned commit.
 
-The `dissipative-adapter-4.18` source candidate is not deployed. It removes the uninstalled
+The `dissipative-adapter-4.19` source candidate is not deployed. It removes the uninstalled
 4.17 internal inference proxy and its generated role contract. Dissipative owns its model
 connection and calls its configured provider directly. This fork adapts to the memory API;
 it does not provide model routing, parameters or credentials for Core inference.
@@ -16,3 +16,8 @@ it does not provide model routing, parameters or credentials for Core inference.
 Ordinary chat continues to use WebUI's own model configuration and connection. Memory
 source synchronization, authenticated management, HUD and publication integration remain
 client responsibilities. Future clients are outside this change's scope.
+
+The HUD displays Core's current-chat/current-branch processing coverage projection.
+Archive storage and Curator maintenance counts remain separate; this observational
+summary never claims source verification or exhaustive recall. Older Core versions
+without the additive coverage field keep their existing display.

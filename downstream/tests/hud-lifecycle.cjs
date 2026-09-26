@@ -55,7 +55,8 @@ async function run() {
           evaluation_revision: window.fixture.revision};
         if (action === 'STATUS') return {state: 'READY', mode: 'NORMAL', active_count: 0, pinned_count: 0,
           integration: {adapter: 'dissipative-curator-redesign-phase4'}, profile: {profile_id: 'general', revision: 1, profile_hash: 'profile-hash'},
-          profile_selection_revision: 1, scope_generation: 1, branch_generation: 1, processing};
+          profile_selection_revision: 1, scope_generation: 1, branch_generation: 1, processing,
+          coverage: {summary: 'Archive: 3 completed; Curator: 1 completed, 1 pending, 1 failed.'}};
         if (action === 'PROFILE_STATE' && window.fixture.failReads > 0) { window.fixture.failReads--; throw new Error('synthetic read failure'); }
         if (action === 'PROFILE_STATE') return {state: 'READY', ...identity, processing,
           nodes: [{kind: 'ITEM', node_id: 'field', field_id: 'field', label: 'Current value', status: 'ESTABLISHED', value: window.fixture.value}]};
@@ -67,6 +68,7 @@ async function run() {
     await page.getByText('Dissipative Memory unavailable', {exact: true}).waitFor();
     await page.evaluate(() => window.control.$set({chatId:'chat-a'}));
     await page.locator('[data-profile-state-field="field"]').getByText('previous value', {exact: true}).waitFor({timeout: 2500});
+    assert.match(await page.locator('[data-testid="dissipative-coverage"]').textContent(), /Archive: 3 completed; Curator: 1 completed, 1 pending, 1 failed/);
     await page.evaluate(() => {
       window.fixture = {state: 'SUCCEEDED_CHANGED', value: 'committed value', revision: 2};
       window.dispatchEvent(new CustomEvent('dissipative:evaluated', {detail: {
