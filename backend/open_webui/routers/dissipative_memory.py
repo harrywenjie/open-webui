@@ -32,6 +32,26 @@ from open_webui.utils.dissipative_naming import setting
 
 router=APIRouter()
 log=logging.getLogger(__name__)
+
+@router.post('/internal/chat/completions')
+async def internal_chat_completion(request: Request, form_data: dict, user=Depends(get_verified_user)):
+    # This endpoint uses the existing protected administrator credential. It
+    # never accepts a body/header instruction to bypass authorization.
+    if user.role != 'admin':
+        raise HTTPException(status_code=403, detail='INTERNAL_MODEL_ADMIN_REQUIRED')
+    from open_webui.utils.dissipative_inference import accept_request
+    from open_webui.routers.openai import generate_chat_completion
+    binding = accept_request(form_data)
+    previous = getattr(request.state, 'dissipative_internal_binding', None)
+    request.state.dissipative_internal_binding = binding
+    try:
+        return await generate_chat_completion(request, binding['body'], user=user)
+    finally:
+        if previous is None:
+            del request.state.dissipative_internal_binding
+        else:
+            request.state.dissipative_internal_binding = previous
+
 ALLOWED=frozenset({"STATUS","SET_MODE","SET_AUTONOMOUS_WRITING","TRACKER_PROJECTION","EVALUATION_WAIT","PROFILE_STATE","PROFILE_LIST","PROFILE_GET","PROFILE_PREVIEW","PROFILE_CREATE","PROFILE_REVISE","PROFILE_DUPLICATE","PROFILE_SELECT","PROFILE_ARCHIVE","PROFILE_DELETE","INSPECT_PAGE","WHY_REMEMBERED","ADD","CORRECT","EDIT","FORGET","REDACT","PIN","UNPIN","CURATOR_PREFERENCES_GET","SET_CURATOR_USER_DEFAULTS","SET_CURATOR_CHAT_OVERRIDE","RESET_CURATOR_CHAT_OVERRIDE"})
 FORBIDDEN=frozenset({"instance_id","owner_id","actor_id","role","authority","api_key","bridge_secret","source_token","qwen_api_key","client_capability","curator_max_in_flight","curator_queue_age_seconds","curator_execution_timeout_seconds","curator_debug_trace","curator_debug_capture_bytes"})
 ENABLED_MODES=frozenset({"NORMAL","READ_ONLY"})
@@ -550,4 +570,3 @@ async def evaluation_completed(form: EvaluationCompletedRequest,request: Request
         log.warning("Dissipative Memory evaluation push failed: %s",error_class)
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,detail="Evaluation push did not complete") from None
     return {"ok":True,"published":bool(published),"evaluation_revision":int(form.evaluation_revision)}
-

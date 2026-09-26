@@ -285,7 +285,7 @@ if SAFE_MODE:
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
-DISSIPATIVE_ADAPTER_BUILD_ID = 'dissipative-adapter-4.16'
+DISSIPATIVE_ADAPTER_BUILD_ID = 'dissipative-adapter-4.17'
 
 
 async def emit_chat_list_event(metadata: dict, chat_id: str):

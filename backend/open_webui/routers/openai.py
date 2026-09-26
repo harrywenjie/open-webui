@@ -1515,6 +1515,10 @@ async def generate_chat_completion(
     model_info = await Models.get_model_by_id(model_id)
 
     # Check model info and override the payload
+    internal_binding = getattr(request.state, 'dissipative_internal_binding', None)
+    if internal_binding is not None:
+        from open_webui.utils.dissipative_inference import validate_model
+        validate_model(internal_binding, model_info)
     if model_info:
         if model_info.base_model_id:
             base_model_id = (
@@ -1525,7 +1529,7 @@ async def generate_chat_completion(
 
         params = model_info.params.model_dump()
 
-        if params:
+        if params and internal_binding is None:
             system = params.pop('system', None)
 
             payload = apply_model_params_to_body_openai(params, payload)
@@ -1647,6 +1651,10 @@ async def generate_chat_completion(
     is_streaming_request = bool(payload.get('stream', False))
     if not is_streaming_request:
         payload.pop('stream_options', None)
+
+    if internal_binding is not None:
+        from open_webui.utils.dissipative_inference import validate_final
+        validate_final(internal_binding, payload, api_config)
 
     payload = JSONCodec.dumps(payload)
 
