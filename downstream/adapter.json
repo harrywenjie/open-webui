@@ -1,5 +1,5 @@
 {
-  "adapter_version": "dissipative-adapter-4.17",
+  "adapter_version": "dissipative-adapter-4.18",
   "upstream": {
     "version": "0.11.4",
     "tag": "v0.11.4",
@@ -14,8 +14,7 @@
     "src/lib/components/chat/Chat.svelte",
     "src/lib/components/chat/MessageInput.svelte",
     "src/lib/components/chat/MessageInput/IntegrationsMenu.svelte",
-    "src/lib/components/workspace/common/ValvesModal.svelte",
-    "backend/open_webui/routers/openai.py"
+    "src/lib/components/workspace/common/ValvesModal.svelte"
   ],
   "overlay_paths": [
     "backend/open_webui/routers/dissipative_memory.py",
@@ -30,9 +29,7 @@
     "src/lib/components/chat/DissipativeMemoryControl.svelte",
     "src/lib/components/chat/TrustedFunctionIcon.svelte",
     "src/lib/components/workspace/common/TaskPresetEditor.svelte",
-    "backend/open_webui/utils/dissipative_naming.py",
-    "backend/open_webui/utils/dissipative_inference.py",
-    "backend/open_webui/utils/dissipative_model_contract_data.py"
+    "backend/open_webui/utils/dissipative_naming.py"
   ],
   "branding_manifest": "downstream/branding/manifest.json",
   "branding_id": "data-rift-v1"
