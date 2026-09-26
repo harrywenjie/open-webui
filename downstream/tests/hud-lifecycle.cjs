@@ -6,8 +6,8 @@ const http = require('node:http');
 const assert = require('node:assert/strict');
 const {createRequire} = require('node:module');
 const root = path.resolve(__dirname, '../..');
-const dependencies = process.env.CHAT_MEMORY_FRONTEND_NODE_MODULES;
-if (!dependencies) throw new Error('Set CHAT_MEMORY_FRONTEND_NODE_MODULES to the prepared upstream dependencies');
+const dependencies = process.env.DISSIPATIVE_FRONTEND_NODE_MODULES || process.env.CHAT_MEMORY_FRONTEND_NODE_MODULES;
+if (!dependencies) throw new Error('Set DISSIPATIVE_FRONTEND_NODE_MODULES to the prepared upstream dependencies');
 const fromBuild = createRequire(path.join(path.resolve(dependencies), 'package.json'));
 const {compile} = fromBuild('svelte/compiler');
 const esbuild = fromBuild('esbuild');
@@ -22,7 +22,7 @@ async function run() {
     bundle: true, write: false, format: 'iife', platform: 'browser', conditions: ['browser'],
     nodePaths: [path.resolve(dependencies)],
     plugins: [{name: 'actual-hud', setup(build) {
-      build.onResolve({filter: /^\$lib\/apis\/chat-memory$/}, () => ({path: 'api', namespace: 'mock'}));
+      build.onResolve({filter: /^\$lib\/apis\/dissipative-memory$/}, () => ({path: 'api', namespace: 'mock'}));
       build.onLoad({filter: /.*/, namespace: 'mock'}, () => ({contents:
         'export const manageMemory = (_token, chat, action, payload) => window.manage(chat,action,payload);'}));
       build.onResolve({filter: /Tooltip\.svelte$|Wrench\.svelte$|XMark\.svelte$|ProfileEditor\.svelte$/},
