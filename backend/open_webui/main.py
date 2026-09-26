@@ -285,7 +285,7 @@ if SAFE_MODE:
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
-DISSIPATIVE_ADAPTER_BUILD_ID = 'dissipative-adapter-4.16-dev'
+DISSIPATIVE_ADAPTER_BUILD_ID = 'dissipative-adapter-4.16'
 
 
 async def emit_chat_list_event(metadata: dict, chat_id: str):
@@ -872,7 +872,9 @@ app.include_router(users.router, prefix='/api/v1/users', tags=['users'])
 
 app.include_router(channels.router, prefix='/api/v1/channels', tags=['channels'])
 app.include_router(chats.router, prefix='/api/v1/chats', tags=['chats'])
-app.include_router(dissipative_memory.router, prefix='/api/v1/chat-memory', tags=['chat-memory'])
+app.include_router(dissipative_memory.router, prefix='/api/v1/dissipative', tags=['dissipative'])
+# Temporary legacy URL alias: identical authentication and implementation.
+app.include_router(dissipative_memory.router, prefix='/api/v1/chat-memory', include_in_schema=False)
 app.include_router(notes.router, prefix='/api/v1/notes', tags=['notes'])
 
 

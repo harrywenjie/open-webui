@@ -28,6 +28,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from open_webui.utils.dissipative_naming import setting
+
 router=APIRouter()
 log=logging.getLogger(__name__)
 ALLOWED=frozenset({"STATUS","SET_MODE","SET_AUTONOMOUS_WRITING","TRACKER_PROJECTION","EVALUATION_WAIT","PROFILE_STATE","PROFILE_LIST","PROFILE_GET","PROFILE_PREVIEW","PROFILE_CREATE","PROFILE_REVISE","PROFILE_DUPLICATE","PROFILE_SELECT","PROFILE_ARCHIVE","PROFILE_DELETE","INSPECT_PAGE","WHY_REMEMBERED","ADD","CORRECT","EDIT","FORGET","REDACT","PIN","UNPIN","CURATOR_PREFERENCES_GET","SET_CURATOR_USER_DEFAULTS","SET_CURATOR_CHAT_OVERRIDE","RESET_CURATOR_CHAT_OVERRIDE"})
@@ -79,7 +81,7 @@ def _callback_data_root() -> Path:
     this host's durable data tree and the same place `.webui_secret_key` already lives. The Core's
     `--evaluation-callback-token-file` default resolves to the identical path.
     """
-    configured=str(os.environ.get("OPEN_WEBUI_DATA_DIR") or "").strip()
+    configured=str(setting("OPEN_WEBUI_DATA_DIR") or "").strip()
     return Path(configured) if configured else Path.home()/"open-webui"/"data"
 
 def _positive_number_from_payload(value, default: float) -> float:
@@ -113,7 +115,7 @@ def _internal_evaluation_wait(owner_id: str,chat_id: str,maximum_wait_seconds: f
     token=_callback_expected_token()
     if not token:
         return {}
-    url=f"http://127.0.0.1:{os.environ.get('CHAT_MEMORY_OPEN_WEBUI_PORT','8080')}/api/v1/chat-memory/internal/evaluation-wait"
+    url=f"http://127.0.0.1:{setting('DISSIPATIVE_OPEN_WEBUI_PORT','8080')}/api/v1/dissipative/internal/evaluation-wait"
     body=json.dumps({"owner_id":owner_id,"chat_id":chat_id,
                      "maximum_wait_seconds":float(maximum_wait_seconds)},
                     separators=(",",":"),ensure_ascii=False).encode("utf-8")
@@ -128,12 +130,12 @@ def _internal_evaluation_wait(owner_id: str,chat_id: str,maximum_wait_seconds: f
     return value
 
 def _client(path: str, body: dict, timeout: float=3) -> dict:
-    key_path=Path(os.environ["CHAT_MEMORY_API_KEY_FILE"])
+    key_path=Path(setting("DISSIPATIVE_API_KEY_FILE"))
     api_key=key_path.read_text(encoding="utf-8").strip()
-    instance_id=os.environ["CHAT_MEMORY_INSTANCE_ID"].strip()
-    base=os.environ.get("CHAT_MEMORY_LOOPBACK_URL","http://127.0.0.1:18111").rstrip("/")
+    instance_id=setting("DISSIPATIVE_INSTANCE_ID").strip()
+    base=setting("DISSIPATIVE_LOOPBACK_URL","http://127.0.0.1:18111").rstrip("/")
     if not base.startswith(("http://127.0.0.1:","http://localhost:")) or not api_key or not instance_id or len(instance_id)>128: raise RuntimeError("gateway configuration unavailable")
-    request_body={**body,"api_version":"chat-memory.client.v1","instance_id":instance_id,"client_capability":"chat-memory-curator-redesign-phase4"}
+    request_body={**body,"api_version":"dissipative.client.v1","instance_id":instance_id,"client_capability":"dissipative-curator-redesign-phase4"}
     req=urllib.request.Request(base+path,data=json.dumps(request_body,separators=(",",":"),ensure_ascii=False).encode(),method="POST",headers={"Authorization":"Bearer "+api_key,"Content-Type":"application/json"})
     try:
         with urllib.request.urlopen(req,timeout=timeout) as response: raw=response.read(1024*1024+1)
@@ -141,10 +143,10 @@ def _client(path: str, body: dict, timeout: float=3) -> dict:
         raw=exc.read(65537)
         try: error=json.loads(raw).get("error") if len(raw)<=65536 else None
         except (json.JSONDecodeError,UnicodeDecodeError): error=None
-        raise ChatMemoryClientError(exc.code,str(error or "CHAT_MEMORY_HTTP_ERROR")) from exc
+        raise ChatMemoryClientError(exc.code,str(error or "DISSIPATIVE_HTTP_ERROR")) from exc
     if len(raw)>1024*1024: raise RuntimeError("bounded response exceeded")
     value=json.loads(raw)
-    if not isinstance(value,dict) or value.get("api_version")!="chat-memory.client.v1" or value.get("ok") is not True or not isinstance(value.get("result"),dict): raise RuntimeError("invalid response")
+    if not isinstance(value,dict) or value.get("api_version")!="dissipative.client.v1" or value.get("ok") is not True or not isinstance(value.get("result"),dict): raise RuntimeError("invalid response")
     return value["result"]
 
 _source_synchronizer: OpenWebUISourceSynchronizer | None=None
@@ -156,7 +158,7 @@ _observation_status=ObservationStatusRegistry(maximum=256)
 
 def _synchronizer() -> OpenWebUISourceSynchronizer:
     global _source_synchronizer,_source_synchronizer_instance
-    instance_id=os.environ["CHAT_MEMORY_INSTANCE_ID"].strip()
+    instance_id=setting("DISSIPATIVE_INSTANCE_ID").strip()
     if _source_synchronizer is None or _source_synchronizer_instance != instance_id:
         _source_synchronizer=OpenWebUISourceSynchronizer(instance_id,_client)
         _source_synchronizer_instance=instance_id
@@ -294,19 +296,19 @@ def _memory_access_mode(chat) -> str:
     return str((chat.variables or {}).get("memory_access_mode") or "NORMAL")
 
 def _positive_number(name: str,default: float) -> float:
-    """Read one bounded positive numeric CHAT_MEMORY_* setting, else the default."""
-    try: value=float(str(os.environ.get(name,default)).strip())
+    """Read one bounded positive numeric DISSIPATIVE_* setting, else the default."""
+    try: value=float(str(setting(name,default)).strip())
     except (TypeError,ValueError): return default
     if value != value or value in (float("inf"),float("-inf")) or value <= 0: return default
     return value
 
 def _positive_integer(name: str,default: int) -> int:
-    try: value=int(str(os.environ.get(name,default)).strip())
+    try: value=int(str(setting(name,default)).strip())
     except (TypeError,ValueError): return default
     return value if value >= 1 else default
 
 def _switch(name: str,default: str="1") -> bool:
-    return os.environ.get(name,default) != "0"
+    return setting(name,default) != "0"
 
 async def _source_scope_available(chat) -> bool:
     """Cheap content-free inventory probe for one eligible scope.
@@ -354,11 +356,11 @@ def _liveness_supervisor_for() -> SourceLivenessSupervisor:
             chat_identity=lambda chat:(chat.user_id,chat.id),
             available=_source_scope_available,
             repair=_reconcile_recent_chats,
-            enabled=_switch("CHAT_MEMORY_LIVENESS_SYNC"),
-            interval_seconds=_positive_number("CHAT_MEMORY_LIVENESS_INTERVAL_SECONDS",300.0),
-            maximum_backoff_seconds=_positive_number("CHAT_MEMORY_LIVENESS_MAX_BACKOFF_SECONDS",3600.0),
-            maximum_consecutive_failures=_positive_integer("CHAT_MEMORY_LIVENESS_MAX_FAILURES",5),
-            probe_limit=_positive_integer("CHAT_MEMORY_LIVENESS_PROBE_LIMIT",8),
+            enabled=_switch("DISSIPATIVE_LIVENESS_SYNC"),
+            interval_seconds=_positive_number("DISSIPATIVE_LIVENESS_INTERVAL_SECONDS",300.0),
+            maximum_backoff_seconds=_positive_number("DISSIPATIVE_LIVENESS_MAX_BACKOFF_SECONDS",3600.0),
+            maximum_consecutive_failures=_positive_integer("DISSIPATIVE_LIVENESS_MAX_FAILURES",5),
+            probe_limit=_positive_integer("DISSIPATIVE_LIVENESS_PROBE_LIMIT",8),
         )
     return _liveness_supervisor
 
@@ -373,7 +375,7 @@ def _source_liveness_status() -> dict:
 async def _startup_reconcile_with_retry() -> dict:
     """Retry a failed startup reconciliation a bounded number of times."""
     global _startup_reconciliation_status
-    attempts=_positive_integer("CHAT_MEMORY_STARTUP_SYNC_ATTEMPTS",3)
+    attempts=_positive_integer("DISSIPATIVE_STARTUP_SYNC_ATTEMPTS",3)
     backoff=2.0
     status_value={"state":"NOT_STARTED","attempts":0,"error_class":None,"selected":0,"synchronized":0,"failed":0}
     for attempt in range(1,attempts+1):
@@ -384,7 +386,7 @@ async def _startup_reconcile_with_retry() -> dict:
             return status_value
         if attempt < attempts:
             await asyncio.sleep(backoff)
-            backoff=min(backoff*2,_positive_number("CHAT_MEMORY_STARTUP_SYNC_MAX_BACKOFF_SECONDS",60.0))
+            backoff=min(backoff*2,_positive_number("DISSIPATIVE_STARTUP_SYNC_MAX_BACKOFF_SECONDS",60.0))
     log.warning(
         "Dissipative Memory startup reconciliation exhausted %s attempt(s): state=%s error_class=%s",
         attempts,status_value["state"],status_value.get("error_class") or "PER_CHAT_SYNCHRONIZATION_FAILURE",
@@ -394,7 +396,7 @@ async def _startup_reconcile_with_retry() -> dict:
 @router.on_event("startup")
 async def start_source_reconciliation() -> None:
     global _startup_reconciliation_task
-    if _switch("CHAT_MEMORY_STARTUP_SYNC"):
+    if _switch("DISSIPATIVE_STARTUP_SYNC"):
         _startup_reconciliation_task=asyncio.create_task(
             _startup_reconcile_with_retry(),name="chat-memory-source-reconciliation",
         )
@@ -469,7 +471,7 @@ async def manage(form: ManagementRequest,user=Depends(get_verified_user),db: Asy
 
         result=await asyncio.to_thread(_client,"/v1/memory/manage",body)
         if action == "STATUS" and result.get("state") == "READY":
-            if result.get("integration",{}).get("adapter") != "chat-memory-curator-redesign-phase4":
+            if result.get("integration",{}).get("adapter") != "dissipative-curator-redesign-phase4":
                 return {"state":"INCOMPATIBLE","reason":"Dissipative Memory Core and Adapter versions do not match."}
             observation=_observation_status.get(user.id,form.chat_id)
             synchronized=_mode_variables(current_variables,str(result["mode"]))

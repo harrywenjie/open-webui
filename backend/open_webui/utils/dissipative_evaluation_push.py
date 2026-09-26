@@ -5,10 +5,10 @@ terminal state. This module owns the two halves the adapter needs:
 
 1. **the shared secret.** Production runs the Core in client-API mode, where it holds no Open WebUI
    credential, so the callback runs server-to-server with a secret this process owns: a 32-byte
-   random token in `~/open-webui/data/chat-memory-callback.token`, mode 600, created atomically on
+   random token in `~/open-webui/data/dissipative-callback.token`, mode 600, created atomically on
    first use. The Core reads the same file, lazily, so the order the two services start in does not
    matter.
-2. **the publish.** One socket event (`chat_memory:evaluated`) to the owner's own room, so the HUD
+2. **the publish.** One socket event (`dissipative:evaluated`) to the owner's own room, so the HUD
    can refresh without a poll (owner decision D1) and the composer can show its held-send state
    (owner decision D3). It is display state: nothing here changes memory.
 
@@ -34,9 +34,9 @@ log = logging.getLogger(__name__)
 #
 # `CALLBACK_TOKEN_FILENAME` is also the file name the Core's `--evaluation-callback-token-file`
 # default points at.
-CALLBACK_TOKEN_FILENAME = "chat-memory-callback.token"
+CALLBACK_TOKEN_FILENAME = "dissipative-callback.token"
 MINIMUM_TOKEN_LENGTH = 32
-EVALUATION_EVENT_TYPE = "chat_memory:evaluated"
+EVALUATION_EVENT_TYPE = "dissipative:evaluated"
 
 # One publish per scope revision. The Core already guarantees a strictly increasing
 # `evaluation_revision`; this is the adapter's own guard against a repeated delivery of the same
@@ -99,7 +99,7 @@ def ensure_callback_token(data_root: Path | str) -> str:
         pass
     token = secrets.token_hex(32)
     path.parent.mkdir(parents=True, exist_ok=True)
-    handle, temporary = tempfile.mkstemp(dir=str(path.parent), prefix=".chat-memory-callback.", text=True)
+    handle, temporary = tempfile.mkstemp(dir=str(path.parent), prefix=".dissipative-callback.", text=True)
     try:
         with os.fdopen(handle, "w", encoding="utf-8") as stream:
             stream.write(token + "\n")
@@ -133,7 +133,7 @@ async def publish_evaluation_completed(
     evaluation_revision: int,
     lifecycle: dict | None = None,
 ) -> bool:
-    """Publish one `chat_memory:evaluated` event to the owner's room.
+    """Publish one `dissipative:evaluated` event to the owner's room.
 
     Content-free: identities, disposition and revisions only. Returns False when the push was a
     duplicate revision, so the caller can answer *accepted but not published* honestly.

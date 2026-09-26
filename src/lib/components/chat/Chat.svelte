@@ -1206,14 +1206,14 @@
 		if (event.chat_id === $chatId) {
 			await tick();
 			const type = event?.data?.type ?? null;
-			// Dissipative Memory: the Core publishes `chat_memory:evaluated` when a round's evaluation
+			// Dissipative Memory: the Core publishes `dissipative:evaluated` when a round's evaluation
 			// changes lifecycle state, which is the only refresh trigger the HUD has (the 4-second
 			// poll was removed with phase 5H D1). The event names the assistant message, but the HUD
 			// is not tied to one message, so re-emit it on `window` for the HUD to pick up instead of
 			// inventing a second socket listener.
-			if (type === 'chat_memory:evaluated') {
+			if (type === 'dissipative:evaluated') {
 				window.dispatchEvent(
-					new CustomEvent('chat-memory:evaluated', {
+					new CustomEvent('dissipative:evaluated', {
 						detail: {
 							chat_id: event.chat_id,
 							round_id: event?.data?.data?.round_id ?? null,
@@ -1572,7 +1572,7 @@
 		);
 
 	const handleSocketConnect = async () => {
-		window.dispatchEvent(new CustomEvent('chat-memory:reconnected'));
+		window.dispatchEvent(new CustomEvent('dissipative:reconnected'));
 		// Gate on $chatId, not chatIdProp: chats started from the home page keep an empty chatIdProp
 		if (!$chatId || $temporaryChatEnabled) {
 			return;
@@ -3650,7 +3650,7 @@
 					? {
 							chat_variables: {
 								...chatVariables,
-								memory_access_mode: selectedToolIds.includes('phase09_remember')
+								memory_access_mode: selectedToolIds.includes('dissipative_remember')
 									? chatVariables?.memory_previous_enabled_mode ?? 'NORMAL'
 									: 'OFF'
 							}

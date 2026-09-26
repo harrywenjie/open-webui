@@ -105,7 +105,7 @@
 	let toolRequestId = 0;
 	let skillRequestId = 0;
 
-	$: toolIds = Object.keys(tools ?? {}).filter((id) => id !== 'phase09_remember');
+	$: toolIds = Object.keys(tools ?? {}).filter((id) => id !== 'dissipative_remember');
 	$: skillIds = Object.keys(skills ?? {});
 
 	$: if (show && toolQuery !== searchedToolQuery) {
@@ -318,7 +318,7 @@
 					in:fly={{ x: -20, duration: 150 }}
 				>
 					{#if tools}
-						{#if tools?.phase09_remember}
+						{#if tools?.dissipative_remember}
 							<Tooltip content={chatMemoryError || (chatMemoryAvailable ? 'Dissipative Memory' : 'Dissipative Memory is unavailable for this model or account')} placement="top-start">
 								<button
 									class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal rounded-xl hover:bg-gray-50/40 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-gray-800/40"

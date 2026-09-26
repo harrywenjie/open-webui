@@ -8,4 +8,4 @@ Upgrades merge a fixed upstream release into a new branch, resolve conflicts, ru
 
 The Dissipative repository carries machine-generated patch/overlay exports for offline qualification. They are not editable sources; changes start in this fork and are exported from a pinned commit.
 
-The `dissipative-adapter-4.16-dev` source candidate is not deployed. Existing API routes, socket event names, model metadata and plugin IDs remain compatibility contracts until a coordinated deployment migration.
+The `dissipative-adapter-4.16` source candidate is not deployed. Existing API routes, socket event names, model metadata and plugin IDs remain compatibility contracts until a coordinated deployment migration.

@@ -1,12 +1,12 @@
 // Mount the real Svelte HUD in Chromium. Only management HTTP and unrelated widgets are doubled.
-// Usage: CHAT_MEMORY_FRONTEND_NODE_MODULES=<qualified build>/node_modules node <this file>
+// Usage: DISSIPATIVE_FRONTEND_NODE_MODULES=<qualified build>/node_modules node <this file>
 const fs = require('node:fs');
 const path = require('node:path');
 const http = require('node:http');
 const assert = require('node:assert/strict');
 const {createRequire} = require('node:module');
 const root = path.resolve(__dirname, '../..');
-const dependencies = process.env.DISSIPATIVE_FRONTEND_NODE_MODULES || process.env.CHAT_MEMORY_FRONTEND_NODE_MODULES;
+const dependencies = process.env.DISSIPATIVE_FRONTEND_NODE_MODULES || process.env.DISSIPATIVE_FRONTEND_NODE_MODULES;
 if (!dependencies) throw new Error('Set DISSIPATIVE_FRONTEND_NODE_MODULES to the prepared upstream dependencies');
 const fromBuild = createRequire(path.join(path.resolve(dependencies), 'package.json'));
 const {compile} = fromBuild('svelte/compiler');
@@ -17,7 +17,7 @@ const main = path.join(root, 'src/lib/components/chat/DissipativeMemoryControl.s
 async function run() {
   const bundle = await esbuild.build({
     stdin: {contents: `import {createClassComponent} from 'svelte/legacy'; import Hud from ${JSON.stringify(main)};
-      window.control = createClassComponent({component:Hud,target:document.body,props:{chatId:'',available:true,availableState:true,enabled:true,selectedToolIds:['phase09_remember']}});`,
+      window.control = createClassComponent({component:Hud,target:document.body,props:{chatId:'',available:true,availableState:true,enabled:true,selectedToolIds:['dissipative_remember']}});`,
       resolveDir: root, sourcefile: 'hud-entry.js'},
     bundle: true, write: false, format: 'iife', platform: 'browser', conditions: ['browser'],
     nodePaths: [path.resolve(dependencies)],
@@ -54,7 +54,7 @@ async function run() {
         const processing = {state: window.fixture.state, round_id: 'round-a',
           evaluation_revision: window.fixture.revision};
         if (action === 'STATUS') return {state: 'READY', mode: 'NORMAL', active_count: 0, pinned_count: 0,
-          integration: {adapter: 'chat-memory-curator-redesign-phase4'}, profile: {profile_id: 'general', revision: 1, profile_hash: 'profile-hash'},
+          integration: {adapter: 'dissipative-curator-redesign-phase4'}, profile: {profile_id: 'general', revision: 1, profile_hash: 'profile-hash'},
           profile_selection_revision: 1, scope_generation: 1, branch_generation: 1, processing};
         if (action === 'PROFILE_STATE' && window.fixture.failReads > 0) { window.fixture.failReads--; throw new Error('synthetic read failure'); }
         if (action === 'PROFILE_STATE') return {state: 'READY', ...identity, processing,
@@ -69,7 +69,7 @@ async function run() {
     await page.locator('[data-profile-state-field="field"]').getByText('previous value', {exact: true}).waitFor({timeout: 2500});
     await page.evaluate(() => {
       window.fixture = {state: 'SUCCEEDED_CHANGED', value: 'committed value', revision: 2};
-      window.dispatchEvent(new CustomEvent('chat-memory:evaluated', {detail: {
+      window.dispatchEvent(new CustomEvent('dissipative:evaluated', {detail: {
         chat_id: 'chat-a', evaluation_revision: 2, event_version: 2, phase: 'TERMINAL',
         scope_generation: 1, branch_generation: 1, disposition: 'COMMITTED'}}));
     });
@@ -78,7 +78,7 @@ async function run() {
     for (const [revision, phase, state, label] of [[3, 'QUEUED', 'WAITING', 'Waiting'], [4, 'RUNNING', 'PROCESSING', 'Processing']]) {
       await page.evaluate(({revision, phase, state}) => {
         window.fixture = {state, value: 'uncommitted value', revision};
-        window.dispatchEvent(new CustomEvent('chat-memory:evaluated', {detail: {
+        window.dispatchEvent(new CustomEvent('dissipative:evaluated', {detail: {
           chat_id: 'chat-a', evaluation_revision: revision, event_version: 2, phase,
           scope_generation: 1, branch_generation: 1, disposition: state}}));
       }, {revision, phase, state});
@@ -89,7 +89,7 @@ async function run() {
     // Failure is a terminal status, never permission to replace last committed values.
     await page.evaluate(() => {
       window.fixture = {state: 'FAILED', value: 'failed proposal', revision: 5};
-      window.dispatchEvent(new CustomEvent('chat-memory:evaluated', {detail: {chat_id: 'chat-a', evaluation_revision: 5}}));
+      window.dispatchEvent(new CustomEvent('dissipative:evaluated', {detail: {chat_id: 'chat-a', evaluation_revision: 5}}));
     });
     await page.locator('[data-testid="profile-evaluation-status"]').filter({hasText: 'Failed'}).waitFor();
     assert.match(await page.locator('[data-profile-state-field="field"]').innerText(), /committed value/);
@@ -97,14 +97,14 @@ async function run() {
     // A failed read cannot consume the success revision; bounded read recovery applies the result.
     await page.evaluate(() => {
       window.fixture = {state: 'SUCCEEDED_UNCHANGED', value: 'recovered value', revision: 6, failReads: 1};
-      window.dispatchEvent(new CustomEvent('chat-memory:evaluated', {detail: {chat_id: 'chat-a', evaluation_revision: 6}}));
+      window.dispatchEvent(new CustomEvent('dissipative:evaluated', {detail: {chat_id: 'chat-a', evaluation_revision: 6}}));
     });
     await page.locator('[data-profile-state-field="field"]').getByText('recovered value', {exact: true}).waitFor();
     await page.waitForTimeout(50);
     const stable = await page.evaluate(() => window.reads.length);
     await page.evaluate(() => {
       for (const [chat_id, evaluation_revision] of [['chat-a', 6], ['chat-a', 3], ['other-chat', 999]]) {
-        window.dispatchEvent(new CustomEvent('chat-memory:evaluated', {detail: {chat_id, evaluation_revision}}));
+        window.dispatchEvent(new CustomEvent('dissipative:evaluated', {detail: {chat_id, evaluation_revision}}));
       }
     });
     await page.waitForTimeout(4300);
@@ -112,7 +112,7 @@ async function run() {
     // A lost completion is recovered by the existing socket's reconnect event.
     await page.evaluate(() => {
       window.fixture = {state: 'SUCCEEDED_CHANGED', value: 'reconnected value', revision: 7};
-      window.dispatchEvent(new CustomEvent('chat-memory:reconnected'));
+      window.dispatchEvent(new CustomEvent('dissipative:reconnected'));
     });
     await page.locator('[data-profile-state-field="field"]').getByText('reconnected value', {exact: true}).waitFor();
     assert.deepEqual(errors, []);

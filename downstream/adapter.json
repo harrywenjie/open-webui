@@ -1,5 +1,5 @@
 {
-  "adapter_version": "dissipative-adapter-4.16-dev",
+  "adapter_version": "dissipative-adapter-4.16",
   "upstream": {
     "version": "0.11.4",
     "tag": "v0.11.4",
@@ -28,7 +28,8 @@
     "src/lib/components/chat/DissipativeMemory/ProjectionNode.svelte",
     "src/lib/components/chat/DissipativeMemoryControl.svelte",
     "src/lib/components/chat/TrustedFunctionIcon.svelte",
-    "src/lib/components/workspace/common/TaskPresetEditor.svelte"
+    "src/lib/components/workspace/common/TaskPresetEditor.svelte",
+    "backend/open_webui/utils/dissipative_naming.py"
   ],
   "branding_manifest": "downstream/branding/manifest.json",
   "branding_id": "data-rift-v1"

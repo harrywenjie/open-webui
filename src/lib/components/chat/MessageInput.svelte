@@ -2387,7 +2387,7 @@
 											<DissipativeMemoryControl
 												bind:this={chatMemoryControl}
 												{chatId}
-												available={selectedModelIds.some((id) => ($models.find((model) => model.id === id)?.info?.meta?.toolIds ?? []).includes('phase09_remember'))}
+												available={selectedModelIds.some((id) => ($models.find((model) => model.id === id)?.info?.meta?.toolIds ?? []).includes('dissipative_remember'))}
 												bind:selectedToolIds
 												bind:enabled={chatMemoryEnabled}
 												bind:availableState={chatMemoryAvailable}
@@ -2395,10 +2395,10 @@
 												bind:stateError={chatMemoryError}
 											/>
 
-											{#if (selectedToolIds ?? []).filter((id) => id !== 'phase09_remember').length > 0}
+											{#if (selectedToolIds ?? []).filter((id) => id !== 'dissipative_remember').length > 0}
 												<Tooltip
 													content={$i18n.t('{{COUNT}} Available Tools', {
-														COUNT: (selectedToolIds ?? []).filter((id) => id !== 'phase09_remember').length
+														COUNT: (selectedToolIds ?? []).filter((id) => id !== 'dissipative_remember').length
 													})}
 												>
 													<button
@@ -2412,7 +2412,7 @@
 														<Wrench className="size-4" strokeWidth="1.75" />
 
 														<span class="text-sm">
-															{(selectedToolIds ?? []).filter((id) => id !== 'phase09_remember').length}
+															{(selectedToolIds ?? []).filter((id) => id !== 'dissipative_remember').length}
 														</span>
 													</button>
 												</Tooltip>

@@ -4059,7 +4059,7 @@ async def background_tasks_handler(ctx):
                 data={
                     'chat_id': metadata['chat_id'],
                     'assistant_message_id': metadata['message_id'],
-                    'chat_memory_source_finalized': True,
+                    'dissipative_source_finalized': True,
                 },
                 message='Chat source finalized',
             )
@@ -4230,7 +4230,7 @@ async def outlet_filter_handler(ctx):
                     data={
                         'chat_id': chat_id,
                         'assistant_message_id': message_id,
-                        'chat_memory_source_finalized': True,
+                        'dissipative_source_finalized': True,
                     },
                     message='Chat source finalized',
                 )

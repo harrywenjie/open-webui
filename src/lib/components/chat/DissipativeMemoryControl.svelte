@@ -76,9 +76,9 @@
     manageMemory(token(), scope, action, payload);
 
   function syncRecallTool(state: boolean) {
-    const hasTool = selectedToolIds.includes("phase09_remember");
-    if (state && !hasTool) selectedToolIds = [...selectedToolIds, "phase09_remember"];
-    if (!state && hasTool) selectedToolIds = selectedToolIds.filter((id) => id !== "phase09_remember");
+    const hasTool = selectedToolIds.includes("dissipative_remember");
+    if (state && !hasTool) selectedToolIds = [...selectedToolIds, "dissipative_remember"];
+    if (!state && hasTool) selectedToolIds = selectedToolIds.filter((id) => id !== "dissipative_remember");
   }
 
   function portal(node: HTMLElement) {
@@ -113,7 +113,7 @@
     stateError = "";
     availableState = available;
     pending = Boolean(available && chatId);
-    enabled = Boolean(available && !chatId && selectedToolIds.includes("phase09_remember"));
+    enabled = Boolean(available && !chatId && selectedToolIds.includes("dissipative_remember"));
     if (!available) {
       syncRecallTool(false);
       if (get(hudOwner) === instanceId) closePanel({ restoreFocus: false });
@@ -148,7 +148,7 @@
     try {
       const result = await scopedCall(scope, "STATUS");
       if (!isCurrent(scope, generation) || readGeneration !== statusReadGeneration) return;
-      if (result.state === "READY" && result.integration?.adapter !== "chat-memory-curator-redesign-phase4") {
+      if (result.state === "READY" && result.integration?.adapter !== "dissipative-curator-redesign-phase4") {
         status = { state: "INCOMPATIBLE", reason: "Dissipative Memory Core and Adapter versions do not match." };
         availableState = false;
         enabled = false;
@@ -379,7 +379,7 @@
       const result = await scopedCall(scope, "SET_MODE", { mode, base_revision: revision });
       if (!isCurrent(scope, generation)) return;
       if (result.state !== "MODE_UPDATED" || result.mode !== mode) throw new Error("Mode update was not accepted");
-      window.dispatchEvent(new CustomEvent("chat-memory:changed"));
+      window.dispatchEvent(new CustomEvent("dissipative:changed"));
       await refreshStatus();
     } catch (e) {
       if (!isCurrent(scope, generation)) return;
@@ -407,7 +407,7 @@
         throw new Error("Autonomous writing update was not accepted");
       }
       await refreshStatus();
-      if (isCurrent(scope, generation)) window.dispatchEvent(new CustomEvent("chat-memory:changed"));
+      if (isCurrent(scope, generation)) window.dispatchEvent(new CustomEvent("dissipative:changed"));
     } catch (e: any) {
       if (!isCurrent(scope, generation)) return;
       error = e?.detail ?? "Autonomous memory writing update failed";
@@ -475,7 +475,7 @@
       enabled = state;
       syncRecallTool(state);
       if (!state && get(hudOwner) === instanceId) closePanel({ restoreFocus: false });
-      window.dispatchEvent(new CustomEvent("chat-memory:changed"));
+      window.dispatchEvent(new CustomEvent("dissipative:changed"));
       return;
     }
     await setMode(state ? previousEnabledMode : "OFF");
@@ -531,7 +531,7 @@
         inspector = { ...inspector, items: inspector.items.map((value: any) => value.revision_id === target.revision_id ? { ...value, why: result } : value) };
         return;
       }
-      window.dispatchEvent(new CustomEvent("chat-memory:changed"));
+      window.dispatchEvent(new CustomEvent("dissipative:changed"));
       await refreshHud();
     } catch (e: any) {
       if (isCurrent(scope, generation)) error = e?.detail ?? "Memory operation failed";
@@ -602,7 +602,7 @@
       if (!isCurrent(scope, generation)) return;
       editor = null;
       notice = "Profile saved as an immutable revision.";
-      window.dispatchEvent(new CustomEvent("chat-memory:changed"));
+      window.dispatchEvent(new CustomEvent("dissipative:changed"));
       await refreshHud();
     } catch (e: any) {
       if (isCurrent(scope, generation)) error = e?.detail ?? "Profile save failed";
@@ -623,7 +623,7 @@
       await refreshHud();
       if (!isCurrent(scope, generation) || status.profile?.profile_id !== profile.profile_id || status.profile?.revision !== profile.revision) return;
       notice = `${profile.display_name} is now used by this chat.`;
-      window.dispatchEvent(new CustomEvent("chat-memory:changed"));
+      window.dispatchEvent(new CustomEvent("dissipative:changed"));
     } catch (e: any) {
       if (!isCurrent(scope, generation)) return;
       error = e?.detail ?? "Profile selection failed";
@@ -646,7 +646,7 @@
       await refreshHud();
       if (!isCurrent(scope, generation)) return;
       notice = `${target.display_name} deleted. ${result.fallback_chats} chat${result.fallback_chats === 1 ? "" : "s"} moved to General.`;
-      window.dispatchEvent(new CustomEvent("chat-memory:changed"));
+      window.dispatchEvent(new CustomEvent("dissipative:changed"));
     } catch (e: any) {
       if (!isCurrent(scope, generation)) return;
       error = e?.detail ?? "Profile deletion failed";
@@ -666,9 +666,9 @@
       }
     });
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("chat-memory:changed", handleMemoryChanged);
-    window.addEventListener("chat-memory:evaluated", handleEvaluationPush);
-    window.addEventListener("chat-memory:reconnected", handleReconnect);
+    window.addEventListener("dissipative:changed", handleMemoryChanged);
+    window.addEventListener("dissipative:evaluated", handleEvaluationPush);
+    window.addEventListener("dissipative:reconnected", handleReconnect);
     if (usableScope() && !(get(hudOpen) && get(hudOwner) === instanceId)) refreshStatus();
   });
 
@@ -678,9 +678,9 @@
     unsubscribeOpen?.();
     unsubscribeOwner?.();
     document.removeEventListener("visibilitychange", handleVisibilityChange);
-    window.removeEventListener("chat-memory:changed", handleMemoryChanged);
-    window.removeEventListener("chat-memory:evaluated", handleEvaluationPush);
-    window.removeEventListener("chat-memory:reconnected", handleReconnect);
+    window.removeEventListener("dissipative:changed", handleMemoryChanged);
+    window.removeEventListener("dissipative:evaluated", handleEvaluationPush);
+    window.removeEventListener("dissipative:reconnected", handleReconnect);
     if (refreshRetry !== null) clearTimeout(refreshRetry);
     mountedInstances.delete(instanceId);
     if (get(hudOwner) === instanceId) {
@@ -700,7 +700,7 @@
   }
 
   $: if (!chatId && availableState && !pending) {
-    enabled = selectedToolIds.includes("phase09_remember");
+    enabled = selectedToolIds.includes("dissipative_remember");
   }
 
   const modeLabel = (mode: string) => mode === "NORMAL" ? "On" : mode === "READ_ONLY" ? "Read only" : mode === "OFF" ? "Off" : mode;
@@ -728,10 +728,10 @@
 </script>
 
 {#if enabled && availableState}
-  <div class="group ml-1 flex shrink-0 items-center rounded-full border border-sky-200/40 bg-sky-50 text-sky-500 dark:border-sky-500/20 dark:bg-sky-400/10 dark:text-sky-300 ops-composer-control ops-composer-control--active" data-testid="chat-memory-control">
+  <div class="group ml-1 flex shrink-0 items-center rounded-full border border-sky-200/40 bg-sky-50 text-sky-500 dark:border-sky-500/20 dark:bg-sky-400/10 dark:text-sky-300 ops-composer-control ops-composer-control--active" data-testid="dissipative-control">
     {#if sendHold}
       <!-- Display-only evaluation activity. -->
-      <span class="px-2 text-[11px] leading-none ops-muted" data-testid="chat-memory-send-hold" role="status" aria-live="polite">Recording Facts…</span>
+      <span class="px-2 text-[11px] leading-none ops-muted" data-testid="dissipative-send-hold" role="status" aria-live="polite">Recording Facts…</span>
     {/if}
     <Tooltip content="Dissipative Memory" placement="top">
       <button
@@ -741,7 +741,7 @@
         aria-label="Dissipative Memory"
         aria-haspopup="dialog"
         aria-expanded={$hudOpen && $hudOwner === instanceId}
-        aria-controls="chat-memory-panel"
+        aria-controls="dissipative-panel"
         on:click={togglePanel}
       >
         <Wrench className="size-4" strokeWidth="1.75" />
@@ -765,8 +765,8 @@
   <div
     use:portal
     bind:this={memoryPanel}
-    id="chat-memory-panel"
-    data-testid="chat-memory-panel"
+    id="dissipative-panel"
+    data-testid="dissipative-panel"
     class="ops-memory-hud fixed right-3 top-1/2 z-[9998] m-0 flex max-h-[calc(100vh-24px)] w-[min(384px,calc(100vw-24px))] -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white p-0 text-gray-900 shadow-2xl dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
     role="dialog"
     aria-modal="false"
@@ -777,7 +777,7 @@
     <header class="ops-memory-hud__header flex shrink-0 items-start justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
       <div class="min-w-0 pr-2">
         <h2 class="text-sm font-semibold">Dissipative Memory</h2>
-        <p class="ops-muted mt-0.5 text-xs" data-testid="chat-memory-status">{headerStatus}</p>
+        <p class="ops-muted mt-0.5 text-xs" data-testid="dissipative-status">{headerStatus}</p>
       </div>
       <button type="button" aria-label="Close Dissipative Memory" class="ops-memory-action rounded-lg px-2 py-1 focus:outline-hidden" on:click={() => closePanel()}>✕</button>
     </header>
@@ -799,7 +799,7 @@
         <div class="rounded-xl border border-gray-200 p-3 text-sm text-gray-500 dark:border-gray-700">Loading current chat…</div>
       {:else if view === "overview"}
         {#if status.observation?.state === "FAILED"}
-          <div class="ops-memory-alert ops-memory-alert--warning mb-3 rounded-xl border p-3 text-sm" role="status" data-testid="chat-memory-observation-warning">
+          <div class="ops-memory-alert ops-memory-alert--warning mb-3 rounded-xl border p-3 text-sm" role="status" data-testid="dissipative-observation-warning">
             <strong class="block">Latest response was not recorded</strong>
             <span>Profile State may be out of date ({status.observation.error_class ?? "INTERNAL_ERROR"}).</span>
           </div>
@@ -827,7 +827,7 @@
             on:click={() => setAutonomousWriting(!status.autonomous_writing_enabled)}
           >{autonomousPending ? "Saving…" : status.autonomous_writing_enabled ? "On" : "Off"}</button>
         </section>
-        <section class="mb-3 border-t border-gray-200 pt-3 dark:border-gray-700" data-testid="chat-memory-profile-state">
+        <section class="mb-3 border-t border-gray-200 pt-3 dark:border-gray-700" data-testid="dissipative-profile-state">
           <div class="mb-2 flex items-start justify-between gap-2 px-1">
             <div>
               <h3 class="text-sm font-semibold">Profile State</h3>
