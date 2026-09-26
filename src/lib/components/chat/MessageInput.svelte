@@ -77,7 +77,7 @@
 	import { createNoteHandler } from '../notes/utils';
 	import { getSuggestionRenderer } from '../common/RichTextInput/suggestions';
 
-	import ChatMemoryControl from './ChatMemoryControl.svelte';
+	import DissipativeMemoryControl from './DissipativeMemoryControl.svelte';
 	import TrustedFunctionIcon from './TrustedFunctionIcon.svelte';
 	import InputMenu from './MessageInput/InputMenu.svelte';
 	import VoiceRecording from './MessageInput/VoiceRecording.svelte';
@@ -234,7 +234,7 @@
 	let selectedValvesType = 'tool'; // 'tool' or 'function'
 	let selectedValvesItemId = null;
 	let integrationsMenuCloseOnOutsideClick = true;
-	let chatMemoryControl: ChatMemoryControl;
+	let chatMemoryControl: DissipativeMemoryControl;
 	let chatMemoryEnabled = false;
 	let chatMemoryAvailable = false;
 	let chatMemoryPending = false;
@@ -269,7 +269,7 @@
 
 	const dispatchChatSubmit = () => {
 		if (chatMemoryPending) {
-			toast.warning('Please wait for the Chat Memory setting to finish updating.');
+			toast.warning('Please wait for the Dissipative Memory setting to finish updating.');
 			return;
 		}
 		dispatch('submit', prompt);
@@ -2384,7 +2384,7 @@
 										{/if}
 
 										<div class="ml-1 flex gap-1.5 shrink-0">
-											<ChatMemoryControl
+											<DissipativeMemoryControl
 												bind:this={chatMemoryControl}
 												{chatId}
 												available={selectedModelIds.some((id) => ($models.find((model) => model.id === id)?.info?.meta?.toolIds ?? []).includes('phase09_remember'))}

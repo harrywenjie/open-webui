@@ -12,18 +12,18 @@ except ImportError:  # pragma: no cover - exercised by the integration harness
 from open_webui.internal.db import get_async_db_context, get_async_session
 from open_webui.models.chats import Chat, ChatModel, Chats
 from open_webui.utils.auth import get_verified_user
-from open_webui.utils.chat_memory_source import (
+from open_webui.utils.dissipative_source import (
     ChatMemoryClientError,
     ChatMemoryProjectionError,
     OpenWebUISourceSynchronizer,
 )
-from open_webui.utils.chat_memory_observation import ObservationStatusRegistry
-from open_webui.utils.chat_memory_evaluation_push import (
+from open_webui.utils.dissipative_observation import ObservationStatusRegistry
+from open_webui.utils.dissipative_evaluation_push import (
     ensure_callback_token,
     publish_evaluation_completed,
     token_matches,
 )
-from open_webui.utils.chat_memory_liveness import SourceLivenessSupervisor, error_class
+from open_webui.utils.dissipative_liveness import SourceLivenessSupervisor, error_class
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -172,7 +172,7 @@ async def _synchronize_chat(chat,owner_id: str,chat_id: str) -> dict:
     except ChatMemoryProjectionError:
         raise HTTPException(status_code=409,detail="Open WebUI chat source is not projectable") from None
     except (ChatMemoryClientError,OSError,TimeoutError,KeyError,ValueError,RuntimeError,urllib.error.URLError,json.JSONDecodeError):
-        raise HTTPException(status_code=503,detail="Chat Memory source synchronization did not complete") from None
+        raise HTTPException(status_code=503,detail="Dissipative Memory source synchronization did not complete") from None
     return asdict(result)
 
 async def _owned_chat(owner_id: str,chat_id: str):
@@ -202,7 +202,7 @@ async def prepare_for_chat(owner_id: str,chat_id: str,request_text: str,correlat
     except Exception:
         # D5's "skip, never retry" applies to the wait as much as to the evaluation: a Core that
         # cannot answer the wait question must not become a reason to refuse the user's turn.
-        log.warning("Chat Memory evaluation wait was not obtained; continuing without it")
+        log.warning("Dissipative Memory evaluation wait was not obtained; continuing without it")
     result=await asyncio.to_thread(_client,"/v1/memory/prepare",body)
     memory=result.get("memory")
     if not isinstance(memory,dict): raise ChatMemoryClientError(503,"INVALID_PREPARE_RESPONSE")
@@ -342,7 +342,7 @@ async def _reconcile_recent_chats() -> dict:
         status_value["state"]="FAILED"
         status_value["failed"]+=1
         status_value["error_class"]=error_class(exc)
-        log.warning("Chat Memory startup reconciliation failed: %s",status_value["error_class"])
+        log.warning("Dissipative Memory startup reconciliation failed: %s",status_value["error_class"])
     return status_value
 
 def _liveness_supervisor_for() -> SourceLivenessSupervisor:
@@ -386,7 +386,7 @@ async def _startup_reconcile_with_retry() -> dict:
             await asyncio.sleep(backoff)
             backoff=min(backoff*2,_positive_number("CHAT_MEMORY_STARTUP_SYNC_MAX_BACKOFF_SECONDS",60.0))
     log.warning(
-        "Chat Memory startup reconciliation exhausted %s attempt(s): state=%s error_class=%s",
+        "Dissipative Memory startup reconciliation exhausted %s attempt(s): state=%s error_class=%s",
         attempts,status_value["state"],status_value.get("error_class") or "PER_CHAT_SYNCHRONIZATION_FAILURE",
     )
     return status_value
@@ -428,9 +428,9 @@ async def ensure_initial_mode(owner_id: str, chat_id: str, variables: dict) -> N
     if mode not in {"READ_ONLY","OFF"}: raise HTTPException(status_code=400,detail="Invalid memory access mode")
     try: result=await asyncio.to_thread(_client,"/v1/memory/manage",{"action":"SET_MODE","owner_id":owner_id,"chat_id":chat_id,"mode":mode,"base_revision":0})
     except (OSError,KeyError,ValueError,RuntimeError,urllib.error.URLError,json.JSONDecodeError):
-        raise HTTPException(status_code=503,detail="Chat Memory mode update did not complete") from None
+        raise HTTPException(status_code=503,detail="Dissipative Memory mode update did not complete") from None
     if result.get("state") not in {"MODE_UPDATED","DISABLED"} or result.get("mode") not in {mode,"OFF"}:
-        raise HTTPException(status_code=503,detail="Chat Memory mode update was not accepted")
+        raise HTTPException(status_code=503,detail="Dissipative Memory mode update was not accepted")
 
 @router.post("/manage")
 async def manage(form: ManagementRequest,user=Depends(get_verified_user),db: AsyncSession=Depends(get_async_session)):
@@ -464,18 +464,18 @@ async def manage(form: ManagementRequest,user=Depends(get_verified_user),db: Asy
                 try:
                     await asyncio.to_thread(_client,"/v1/memory/manage",{"action":"SET_MODE","owner_id":user.id,"chat_id":form.chat_id,"mode":previous.get("mode","NORMAL"),"base_revision":result.get("config_revision")})
                 finally:
-                    raise HTTPException(status_code=503,detail="Chat Memory mode persistence did not complete")
+                    raise HTTPException(status_code=503,detail="Dissipative Memory mode persistence did not complete")
             return {**result,"client_previous_enabled_mode":_mode_variables(current_variables,target)["memory_previous_enabled_mode"]}
 
         result=await asyncio.to_thread(_client,"/v1/memory/manage",body)
         if action == "STATUS" and result.get("state") == "READY":
             if result.get("integration",{}).get("adapter") != "chat-memory-curator-redesign-phase4":
-                return {"state":"INCOMPATIBLE","reason":"Chat Memory Core and Adapter versions do not match."}
+                return {"state":"INCOMPATIBLE","reason":"Dissipative Memory Core and Adapter versions do not match."}
             observation=_observation_status.get(user.id,form.chat_id)
             synchronized=_mode_variables(current_variables,str(result["mode"]))
             if synchronized != current_variables:
                 updated=await Chats.update_chat_variables_by_id(form.chat_id,synchronized,db=db,touch=False)
-                if updated is None: raise HTTPException(status_code=503,detail="Chat Memory mode persistence did not complete")
+                if updated is None: raise HTTPException(status_code=503,detail="Dissipative Memory mode persistence did not complete")
             result={**result,"observation":observation,"client_previous_enabled_mode":synchronized["memory_previous_enabled_mode"],"source_liveness":_source_liveness_status()}
         return result
     except (OSError,KeyError,ValueError,RuntimeError,urllib.error.URLError,json.JSONDecodeError):
@@ -528,7 +528,7 @@ async def evaluation_completed(form: EvaluationCompletedRequest,request: Request
     try:
         expected=ensure_callback_token(_callback_data_root())
     except OSError:
-        log.warning("Chat Memory evaluation push token is unavailable")
+        log.warning("Dissipative Memory evaluation push token is unavailable")
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,detail="Evaluation callback is unavailable") from None
     if not token_matches(_bearer(request),expected):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Invalid evaluation callback credential")
@@ -545,7 +545,7 @@ async def evaluation_completed(form: EvaluationCompletedRequest,request: Request
     except Exception as failure:
         # Class name only: the router's logging is constrained to content-free fields.
         error_class=type(failure).__name__
-        log.warning("Chat Memory evaluation push failed: %s",error_class)
+        log.warning("Dissipative Memory evaluation push failed: %s",error_class)
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,detail="Evaluation push did not complete") from None
     return {"ok":True,"published":bool(published),"evaluation_revision":int(form.evaluation_revision)}
 

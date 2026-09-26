@@ -319,17 +319,17 @@
 				>
 					{#if tools}
 						{#if tools?.phase09_remember}
-							<Tooltip content={chatMemoryError || (chatMemoryAvailable ? 'Chat Memory' : 'Chat Memory is unavailable for this model or account')} placement="top-start">
+							<Tooltip content={chatMemoryError || (chatMemoryAvailable ? 'Dissipative Memory' : 'Dissipative Memory is unavailable for this model or account')} placement="top-start">
 								<button
 									class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal rounded-xl hover:bg-gray-50/40 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-gray-800/40"
-									aria-label="Chat Memory"
+									aria-label="Dissipative Memory"
 									aria-pressed={chatMemoryAvailable ? chatMemoryEnabled : undefined}
 									disabled={!chatMemoryAvailable || chatMemoryPending}
 									on:click={() => onChatMemoryToggle()}
 								>
 									<div class="flex min-w-0 flex-1 items-center gap-2">
 										<Wrench className="size-3.5" strokeWidth="1.75" />
-										<span class="truncate">Chat Memory</span>
+										<span class="truncate">Dissipative Memory</span>
 									</div>
 									<div class="shrink-0" inert><Switch state={chatMemoryEnabled} /></div>
 								</button>

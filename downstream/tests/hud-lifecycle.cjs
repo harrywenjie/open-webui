@@ -12,7 +12,7 @@ const fromBuild = createRequire(path.join(path.resolve(dependencies), 'package.j
 const {compile} = fromBuild('svelte/compiler');
 const esbuild = fromBuild('esbuild');
 const {chromium} = require(path.join(process.env.APPDATA, 'npm/node_modules/@playwright/mcp/node_modules/playwright'));
-const main = path.join(root, 'src/lib/components/chat/ChatMemoryControl.svelte');
+const main = path.join(root, 'src/lib/components/chat/DissipativeMemoryControl.svelte');
 
 async function run() {
   const bundle = await esbuild.build({
@@ -63,8 +63,8 @@ async function run() {
       };
     });
     await page.goto(`http://127.0.0.1:${server.address().port}`);
-    await page.locator('button[aria-label="Chat Memory"]').click();
-    await page.getByText('Chat Memory unavailable', {exact: true}).waitFor();
+    await page.locator('button[aria-label="Dissipative Memory"]').click();
+    await page.getByText('Dissipative Memory unavailable', {exact: true}).waitFor();
     await page.evaluate(() => window.control.$set({chatId:'chat-a'}));
     await page.locator('[data-profile-state-field="field"]').getByText('previous value', {exact: true}).waitFor({timeout: 2500});
     await page.evaluate(() => {

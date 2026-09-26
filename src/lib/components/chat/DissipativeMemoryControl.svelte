@@ -13,10 +13,10 @@
   import Tooltip from "$lib/components/common/Tooltip.svelte";
   import Wrench from "$lib/components/icons/Wrench.svelte";
   import XMark from "$lib/components/icons/XMark.svelte";
-  import { manageMemory } from "$lib/apis/chat-memory";
-  import ProjectionNode from "./ChatMemory/ProjectionNode.svelte";
-  import ProfileStateNode from "./ChatMemory/ProfileStateNode.svelte";
-  import ProfileEditor from "./ChatMemory/ProfileEditor.svelte";
+  import { manageMemory } from "$lib/apis/dissipative-memory";
+  import ProjectionNode from "./DissipativeMemory/ProjectionNode.svelte";
+  import ProfileStateNode from "./DissipativeMemory/ProfileStateNode.svelte";
+  import ProfileEditor from "./DissipativeMemory/ProfileEditor.svelte";
 
   export let chatId = "";
   export let available = false;
@@ -121,7 +121,7 @@
     status = !chatId
       ? { state: "Unavailable", reason: "This new chat is not associated with Memory yet." }
       : !available
-        ? { state: "Unavailable", reason: "The selected model does not support Chat Memory." }
+        ? { state: "Unavailable", reason: "The selected model does not support Dissipative Memory." }
         : { state: "Loading" };
     sendHold = false;
   }
@@ -149,7 +149,7 @@
       const result = await scopedCall(scope, "STATUS");
       if (!isCurrent(scope, generation) || readGeneration !== statusReadGeneration) return;
       if (result.state === "READY" && result.integration?.adapter !== "chat-memory-curator-redesign-phase4") {
-        status = { state: "INCOMPATIBLE", reason: "Chat Memory Core and Adapter versions do not match." };
+        status = { state: "INCOMPATIBLE", reason: "Dissipative Memory Core and Adapter versions do not match." };
         availableState = false;
         enabled = false;
         pending = false;
@@ -191,7 +191,7 @@
       if (!isCurrent(scope, generation) || readGeneration !== statusReadGeneration) return;
       status = { state: "Unavailable", reason: "Memory service unavailable." };
       error = "Memory service unavailable";
-      stateError = "Chat Memory status is unavailable";
+      stateError = "Dissipative Memory status is unavailable";
       pending = false;
       // An unreachable Core holds nothing: the backend skips the wait rather than blocking the send.
       sendHold = false;
@@ -387,7 +387,7 @@
       await refreshStatus();
       if (!isCurrent(scope, generation)) return;
       error = "Mode update failed";
-      stateError = "Chat Memory mode update failed";
+      stateError = "Dissipative Memory mode update failed";
     }
   }
 
@@ -733,12 +733,12 @@
       <!-- Display-only evaluation activity. -->
       <span class="px-2 text-[11px] leading-none ops-muted" data-testid="chat-memory-send-hold" role="status" aria-live="polite">Recording Facts…</span>
     {/if}
-    <Tooltip content="Chat Memory" placement="top">
+    <Tooltip content="Dissipative Memory" placement="top">
       <button
         bind:this={triggerElement}
         type="button"
         class="flex items-center self-center rounded-full p-[0.375rem] focus:outline-hidden"
-        aria-label="Chat Memory"
+        aria-label="Dissipative Memory"
         aria-haspopup="dialog"
         aria-expanded={$hudOpen && $hudOwner === instanceId}
         aria-controls="chat-memory-panel"
@@ -747,11 +747,11 @@
         <Wrench className="size-4" strokeWidth="1.75" />
       </button>
     </Tooltip>
-    <Tooltip content="Disable Chat Memory" placement="top">
+    <Tooltip content="Disable Dissipative Memory" placement="top">
       <button
         type="button"
         class="hidden items-center justify-center rounded-full py-[0.375rem] pr-[0.375rem] leading-none focus:flex focus:outline-hidden group-hover:flex group-focus-within:flex"
-        aria-label="Disable Chat Memory"
+        aria-label="Disable Dissipative Memory"
         disabled={pending}
         on:click|stopPropagation={() => setEnabled(false)}
       >
@@ -770,16 +770,16 @@
     class="ops-memory-hud fixed right-3 top-1/2 z-[9998] m-0 flex max-h-[calc(100vh-24px)] w-[min(384px,calc(100vw-24px))] -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white p-0 text-gray-900 shadow-2xl dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
     role="dialog"
     aria-modal="false"
-    aria-label="Chat Memory settings and status"
+    aria-label="Dissipative Memory settings and status"
     tabindex="-1"
     on:keydown={handlePanelKeyDown}
   >
     <header class="ops-memory-hud__header flex shrink-0 items-start justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
       <div class="min-w-0 pr-2">
-        <h2 class="text-sm font-semibold">Chat Memory</h2>
+        <h2 class="text-sm font-semibold">Dissipative Memory</h2>
         <p class="ops-muted mt-0.5 text-xs" data-testid="chat-memory-status">{headerStatus}</p>
       </div>
-      <button type="button" aria-label="Close Chat Memory" class="ops-memory-action rounded-lg px-2 py-1 focus:outline-hidden" on:click={() => closePanel()}>✕</button>
+      <button type="button" aria-label="Close Dissipative Memory" class="ops-memory-action rounded-lg px-2 py-1 focus:outline-hidden" on:click={() => closePanel()}>✕</button>
     </header>
 
     <div class="min-h-0 overflow-y-auto p-3">
@@ -792,7 +792,7 @@
 
       {#if !(available && chatId)}
         <div class="ops-memory-alert ops-memory-alert--warning rounded-xl border p-3 text-sm" role="status">
-          <strong class="block">Chat Memory unavailable</strong>
+          <strong class="block">Dissipative Memory unavailable</strong>
           <span>{status.reason}</span>
         </div>
       {:else if status.state === "Loading"}

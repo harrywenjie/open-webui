@@ -328,14 +328,14 @@ class SourceLivenessSupervisor:
                 self._state = LOOP_STOPPED
                 self._stop_reason = STOPPED_AFTER_FAILURES
                 log.warning(
-                    "Chat Memory source liveness stopped after %s consecutive failed cycles: error_class=%s",
+                    "Dissipative Memory source liveness stopped after %s consecutive failed cycles: error_class=%s",
                     self._consecutive_failures, self._last_error_class,
                 )
                 return self._last_cycle, self.maximum_backoff_seconds
             delay = self.settle_seconds()
             if self._consecutive_failures == 1 or self._consecutive_failures & (self._consecutive_failures - 1) == 0:
                 log.warning(
-                    "Chat Memory source liveness cycle failed: consecutive_failures=%s error_class=%s next_delay_seconds=%s",
+                    "Dissipative Memory source liveness cycle failed: consecutive_failures=%s error_class=%s next_delay_seconds=%s",
                     self._consecutive_failures, self._last_error_class, delay,
                 )
             self._state = LOOP_WAITING
@@ -350,7 +350,7 @@ class SourceLivenessSupervisor:
             delay = self.settle_seconds()
             if self._no_progress == 1 or self._no_progress & (self._no_progress - 1) == 0:
                 log.warning(
-                    "Chat Memory source liveness repair made no progress: no_progress_cycles=%s unavailable=%s next_delay_seconds=%s",
+                    "Dissipative Memory source liveness repair made no progress: no_progress_cycles=%s unavailable=%s next_delay_seconds=%s",
                     self._no_progress, record.unavailable_after, delay,
                 )
             self._state = LOOP_WAITING

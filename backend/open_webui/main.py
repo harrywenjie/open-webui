@@ -154,7 +154,7 @@ from open_webui.routers import (
     calendar,
     channels,
     chats,
-    chat_memory,
+    dissipative_memory,
     configs,
     evaluations,
     files,
@@ -872,7 +872,7 @@ app.include_router(users.router, prefix='/api/v1/users', tags=['users'])
 
 app.include_router(channels.router, prefix='/api/v1/channels', tags=['channels'])
 app.include_router(chats.router, prefix='/api/v1/chats', tags=['chats'])
-app.include_router(chat_memory.router, prefix='/api/v1/chat-memory', tags=['chat-memory'])
+app.include_router(dissipative_memory.router, prefix='/api/v1/chat-memory', tags=['chat-memory'])
 app.include_router(notes.router, prefix='/api/v1/notes', tags=['notes'])
 
 
@@ -1431,7 +1431,7 @@ async def chat_completion(
                     )
                     # A draft OFF/READ_ONLY choice must reach Memory Core before
                     # chat-created events or inlet/outlet filters can accept work.
-                    await chat_memory.ensure_initial_mode(user.id, chat_id, chat_variables)
+                    await dissipative_memory.ensure_initial_mode(user.id, chat_id, chat_variables)
                     await publish_event(
                         request,
                         EVENTS.CHAT_CREATED,

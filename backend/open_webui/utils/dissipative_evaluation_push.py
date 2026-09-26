@@ -1,6 +1,6 @@
 """Phase 5H H1 (adapter side) — receive an evaluation-completion push and publish it.
 
-The Chat Memory Core pushes a bounded, content-free record when a round's evaluation reaches a
+The Dissipative Memory Core pushes a bounded, content-free record when a round's evaluation reaches a
 terminal state. This module owns the two halves the adapter needs:
 
 1. **the shared secret.** Production runs the Core in client-API mode, where it holds no Open WebUI
@@ -28,7 +28,7 @@ from pathlib import Path
 
 log = logging.getLogger(__name__)
 
-# The wire contract with the Chat Memory Core. The Core keeps its own copy (it is a separate
+# The wire contract with the Dissipative Memory Core. The Core keeps its own copy (it is a separate
 # package and cannot import this one) and `tests/integrations/test_evaluation_push_contract.py`
 # asserts the two agree, so neither side can drift silently.
 #

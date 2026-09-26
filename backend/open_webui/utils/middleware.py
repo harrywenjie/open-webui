@@ -2393,7 +2393,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if not isinstance(metadata.get('chat_id'), str):
         metadata['chat_id'] = ''
 
-    # Pipeline Inlet -> Filter Inlet -> Chat Memory -> Chat Web Search -> Chat Image Generation
+    # Pipeline Inlet -> Filter Inlet -> Dissipative Memory -> Chat Web Search -> Chat Image Generation
     # -> Chat Code Interpreter (Form Data Update) -> (Default) Chat Tools Function Calling
     # -> Chat Files
 

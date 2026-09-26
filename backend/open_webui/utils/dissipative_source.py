@@ -19,7 +19,7 @@ class ChatMemoryProjectionError(ValueError):
 
 
 class ChatMemoryClientError(RuntimeError):
-    """A structured failure returned by the Chat Memory client transport."""
+    """A structured failure returned by the Dissipative Memory client transport."""
 
     def __init__(self, status: int, code: str) -> None:
         super().__init__(code)
@@ -289,7 +289,7 @@ class OpenWebUIChatProjector:
 
 
 class OpenWebUISourceSynchronizer:
-    """Converge trusted Open WebUI chats with volatile Chat Memory source state.
+    """Converge trusted Open WebUI chats with volatile Dissipative Memory source state.
 
     The injected transport is the remote-owned seam: production supplies the
     loopback HTTP adapter and tests supply an in-memory adapter. Callers need

@@ -1206,7 +1206,7 @@
 		if (event.chat_id === $chatId) {
 			await tick();
 			const type = event?.data?.type ?? null;
-			// Chat Memory: the Core publishes `chat_memory:evaluated` when a round's evaluation
+			// Dissipative Memory: the Core publishes `chat_memory:evaluated` when a round's evaluation
 			// changes lifecycle state, which is the only refresh trigger the HUD has (the 4-second
 			// poll was removed with phase 5H D1). The event names the assistant message, but the HUD
 			// is not tied to one message, so re-emit it on `window` for the HUD to pick up instead of
@@ -1327,7 +1327,7 @@
 					for (const msg of outletMessages) {
 						if (msg?.id && history.messages[msg.id]) {
 							const existing = history.messages[msg.id];
-							// Chat Memory: a server-side outlet can rewrite the rendered blocks without
+							// Dissipative Memory: a server-side outlet can rewrite the rendered blocks without
 							// changing the text (a continued message is composed from the answer plus the
 							// new text, which the client's own segments already spell out). Comparing
 							// `content` alone then skipped the sync and the client kept rendering and
@@ -1347,7 +1347,7 @@
 						}
 					}
 					history = history;
-					// Chat Memory: this completion's own save has already run by the time the outlet
+					// Dissipative Memory: this completion's own save has already run by the time the outlet
 					// result arrives, so an adopted correction has to be written back or the stored
 					// message keeps the client's own segments (measured live 2026-09-18).
 					if (adopted) await saveChatHandler($chatId, history);
