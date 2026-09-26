@@ -285,7 +285,7 @@ if SAFE_MODE:
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
-CHAT_MEMORY_ADAPTER_BUILD_ID = 'chat-memory-phase4.15'
+DISSIPATIVE_ADAPTER_BUILD_ID = 'dissipative-adapter-4.16-dev'
 
 
 async def emit_chat_list_event(metadata: dict, chat_id: str):
@@ -2607,7 +2607,7 @@ async def get_app_version():
         # Upstream versions do not identify custom frontend builds. A stable
         # adapter build ID lets the existing reconnect lifecycle safely reload
         # an already-running page after a guarded custom-runtime cutover.
-        'deployment_id': DEPLOYMENT_ID or CHAT_MEMORY_ADAPTER_BUILD_ID,
+        'deployment_id': DEPLOYMENT_ID or DISSIPATIVE_ADAPTER_BUILD_ID,
     }
 
 
