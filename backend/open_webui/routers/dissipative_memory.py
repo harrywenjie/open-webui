@@ -217,6 +217,34 @@ async def recall_for_chat(owner_id: str,chat_id: str,request: dict) -> dict:
     body={**request,"owner_id":owner_id,"chat_id":chat_id}
     return await asyncio.to_thread(_client,"/v1/memory/recall",body,8)
 
+async def fast_for_chat(owner_id: str, chat_id: str, action: str, request: dict) -> dict:
+    """Trusted plugin seam; never a browser-selected proxy destination.
+
+    Source synchronization precedes both inference and final publication, so an
+    edit, branch change or deletion after the Tool call revokes stale evidence.
+    Internal model settings remain entirely in Dissipative.
+    """
+    paths = {
+        'answer': ('/v1/memory/fast-answer', 32),
+        'publication': ('/v1/memory/fast-answer/publication', 8),
+        'cancel': ('/v1/memory/fast-answer/cancel', 2),
+    }
+    if action not in paths:
+        raise ValueError('unknown FAST action')
+    chat = await _owned_chat(owner_id, chat_id)
+    await _synchronize_chat(chat, owner_id, chat_id)
+    body = {**request, 'owner_id': owner_id, 'chat_id': chat_id}
+    body.pop('mode', None)
+    body.pop('source_delta', None)
+    if action == 'answer':
+        messages = ((chat.chat or {}).get('history') or {}).get('messages') or {}
+        current = messages.get(body.get('current_message_id')) or {}
+        if current.get('role') != 'user' or not isinstance(current.get('content'), str):
+            raise ChatMemoryProjectionError('trusted current request unavailable')
+        body['current_request'] = current['content']
+    path, timeout = paths[action]
+    return await asyncio.to_thread(_client, path, body, timeout)
+
 async def observe_finalized(owner_id: str,chat_id: str,assistant_message_id: str,receipt_ids: tuple[str,...]=()) -> dict:
     """Admit only the active persisted assistant from the authoritative chat."""
     try:

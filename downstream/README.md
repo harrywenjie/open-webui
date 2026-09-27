@@ -21,3 +21,7 @@ The HUD displays Core's current-chat/current-branch processing coverage projecti
 Archive storage and Curator maintenance counts remain separate; this observational
 summary never claims source verification or exhaustive recall. Older Core versions
 without the additive coverage field keep their existing display.
+
+Adapter 4.20 reconnects FAST answer, cancellation and publication to the authenticated
+Dissipative client API. The server issues one attempt timestamp and rereads the owned
+chat before inference and publication. Model configuration remains Core-owned.

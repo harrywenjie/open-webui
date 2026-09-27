@@ -285,7 +285,7 @@ if SAFE_MODE:
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
-DISSIPATIVE_ADAPTER_BUILD_ID = 'dissipative-adapter-4.19'
+DISSIPATIVE_ADAPTER_BUILD_ID = 'dissipative-adapter-4.20'
 
 
 async def emit_chat_list_event(metadata: dict, chat_id: str):
@@ -1280,6 +1280,9 @@ async def chat_completion(
         )
 
         metadata = {
+            # Server-issued once per outer generation; Tool retries retain the
+            # same FAST deadline and never manufacture a fresh send window.
+            'dissipative_request_issued_at': time.time(),
             'user_id': user.id,
             'user_agent': request.headers.get('user-agent', '') or '',
             'internal': getattr(request.state, 'internal', False) is True,
