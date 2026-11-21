@@ -10,7 +10,7 @@
 
 | 工作包 | 必读输入 | 交付与通过条件 |
 | --- | --- | --- |
-| 新版连续记忆客户端 | [协议及独立 Core 配置](development/open-webui-upgrade-2026-11.md#新版记忆接入) | 在 WebUI 专用空 Core 上完成能力协商、可信来源事件、每轮归档、显式整理、Profile 选择、召回与撤权；按当前合同验证隔离、重试和重启 |
+| 新版连续记忆客户端 | [协议及独立 Core 配置](development/open-webui-upgrade-2026-11.md#新版记忆接入) | 在 WebUI 专用空 Core 上完成能力协商、可信来源事件、每轮归档、显式整理、Profile 选择、召回与撤权，并按当前合同验证隔离、重试和重启 |
 | 下游正常入口与组合演练 | [上游同步第 3 项](development/open-webui-upgrade-2026-11.md#上游同步)、[演练及窗口](development/open-webui-upgrade-2026-11.md#候选资格与-mac-窗口) | 普通流式聊天、隔离与重启回读已通过回环模型。接入专用 Core 后验证 Continue、再生成、编辑、分支、删除、FAST、插件挂载、重启回读新记忆与已选 Profile，完成获准的模型调用 |
 | Mac 切换 | [登录迁移边界](development/open-webui-upgrade-2026-11.md#登录信息最小迁移)、[生产窗口](development/open-webui-upgrade-2026-11.md#候选资格与-mac-窗口) | 组合演练通过后取得窗口授权，复核现场启用的登录方式和专属服务，依本次向前修复决定实施 |
 
