@@ -274,6 +274,10 @@ def run(args):
 
 
 def verify(args, lab, key, result, number):
+    assert ok(http(install.BASE + "/api/version"))["deployment_id"] == "dissipative-adapter-4.22"
+    subprocess.run([sys.executable, str(install.FORK / "downstream/verify_branding.py"), "--url", install.BASE],
+                   check=True, stdout=subprocess.DEVNULL)
+    result["checks"]["adapter_identity_and_served_icons"] = True
     token = ok(install.request("/api/v1/auths/signin", {"email": "admin@example.org", "password": install.PASSWORD}))["token"]
     member = ok(install.request("/api/v1/auths/signin", {"email": "member@example.org", "password": install.PASSWORD}))["token"]
     chat_path = lab / "client-chat.json"
