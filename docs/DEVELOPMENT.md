@@ -4,13 +4,11 @@
 
 2026-11-21，维护者决定把此 fork 同步到官方 `open-webui/open-webui:main`，接入新版 Dissipative 连续记忆。此次切换仅保留用户登录所需信息，允许重新登录，旧聊天和派生记忆从空库开始，故障时向前修复。所有升级均须保留自定义图标与实例主题。[仓库规则](../AGENTS.md#所有升级和更新均须保留自定义图标与主题) · [本次计划](development/open-webui-upgrade-2026-11.md)
 
-Open WebUI 0.13.4 / Adapter 4.22 候选的产品提交为 `106e98dd4`，上游冻结点为 `0666e59d2`。从该提交构建的 wheel 已安装到隔离环境，与 WebUI 专用的 schema 34 空 Core 完成真实 Qwen、浏览器及重启联调。Dissipative 候选 `acb4be0` 保存并核对了 26 个导出文件。最近记录的生产基线为 WebUI 0.11.4 / Adapter 4.20。[组合实测](../downstream/upgrade-20261121.md#schema-34-客户端) · [候选证据](evidence/open-webui-0.13.4-schema34.json) · [导出清单](https://github.com/harrywenjie/dissipative/blob/acb4be0a5db015747697974f539dc62a8f9837c6/adapters/open-webui/adapter_manifest.json)
+Open WebUI 0.13.4 / Adapter 4.22 已于 2026-11-21 在 Mac 开放，产品提交为 `106e98dd4`，上游冻结点为 `0666e59d2`，专用 schema 34 Core 来自 `acb4be0`。现场只迁入登录信息，图标、实例主题、真实 Qwen 对话、记忆召回和服务重启回读已通过。[现场验收与恢复](https://github.com/harrywenjie/PrivateOperations/blob/main/servers/192.168.1.60/reports/2026-11-21-webui-422-cutover.md) · [候选实测](https://github.com/harrywenjie/open-webui/blob/e9bd4de79455b2b509a8ffc7f2eab70fad32d004/docs/evidence/open-webui-0.13.4-schema34.json)
 
 ## 下一任务卡
 
-| 工作包 | 必读输入 | 交付与通过条件 |
-| --- | --- | --- |
-| Mac 切换，等待单独授权 | [登录迁移边界](development/open-webui-upgrade-2026-11.md#登录信息最小迁移) · [窗口与验收](development/open-webui-upgrade-2026-11.md#候选资格与-mac-窗口) | 取得窗口授权后核实现场基线，按白名单迁入登录信息，恢复 Data Rift 与 Harry's Ops Deck，从空库启动 WebUI 专用 Core，现场复验并按向前修复方案处理故障 |
+本次 Mac 窗口已完成，没有待执行的切换步骤。需要处理本次安装的故障时，从[向前修复与备份](https://github.com/harrywenjie/PrivateOperations/blob/main/servers/192.168.1.60/reports/2026-11-21-webui-422-cutover.md#forward-repair-and-backups)进入。新的产品改动按[升级计划](development/open-webui-upgrade-2026-11.md)重新验收。
 
 WorldHatch 使用其原有独立实例。仅在重新打包或更换模型、插件及主题时，复跑受影响的[候选验收](../downstream/upgrade-20261121.md#schema-34-客户端)。
 
