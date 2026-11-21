@@ -10,6 +10,8 @@
 git status --short --branch
 git switch main
 git remote -v
+# 首次克隆只有 origin 时，执行下行一次。
+# git remote add upstream https://github.com/open-webui/open-webui.git
 git fetch --no-tags origin refs/heads/main
 git merge --ff-only FETCH_HEAD
 $fork = (git rev-parse --show-toplevel).Trim()
@@ -70,8 +72,13 @@ git diff --check
 $ops = 'E:/PrivateOperations/servers/192.168.1.60'
 $themeDir = Join-Path $ops 'open-webui-theme'
 $functionsDir = Join-Path $ops 'open-webui-functions'
-python downstream/repatch/verify_protected.py --theme-dir $themeDir --functions-dir $functionsDir
+$privateStage = Join-Path 'E:/PrivateOperations/temp' ('webui-' + $source.Substring(0,12))
+$archive = Join-Path $privateStage 'reviewed.zip'
+python downstream/repatch/verify_protected.py --theme-dir $themeDir --functions-dir $functionsDir --private-archive $archive
+Expand-Archive -LiteralPath $archive -DestinationPath (Join-Path $privateStage 'publication')
 ```
+
+归档从固定 Git blob 导出四份主题发布文件、生成器、定义和 Function 来源，并保留 Theme Designer Pro 审定的 CRLF。即使 Windows 工作树转换了换行，演练和现场发布仍可从这份归档取相同字节。将解包后的 `theme` 和 `functions/theme_designer_pro_event.py` 分别传给演练程序的 `--theme-source` 和 `--theme-function`。每次导出选用新的私有归档路径。
 
 ## 构建与组合验收
 
