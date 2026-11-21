@@ -1,5 +1,7 @@
 # Open WebUI 👋
 
+For work on this fork, start with the [downstream development guide](docs/DEVELOPMENT.md).
+
 ![GitHub stars](https://img.shields.io/github/stars/open-webui/open-webui?style=social)
 ![GitHub forks](https://img.shields.io/github/forks/open-webui/open-webui?style=social)
 ![GitHub watchers](https://img.shields.io/github/watchers/open-webui/open-webui?style=social)
