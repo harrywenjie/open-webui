@@ -52,6 +52,35 @@ export default async function ({ page }) {
   await hud.click();
   await page.getByRole('button', {name:'Curate completed messages'}).waitFor({timeout:20000});
   await page.screenshot({path:path.join(lab, 'continuity-hud.png')});
+  if (!real) {
+    const clickAction = async (button, action) => {
+      const [response] = await Promise.all([
+        page.waitForResponse(r => r.url().endsWith('/api/v1/dissipative/manage') &&
+          r.request().postDataJSON()?.action === action),
+        button.click()
+      ]);
+      assert.equal(response.status(), 200, action);
+      return response.json();
+    };
+    await page.getByRole('button', {name:'Profile Management', exact:true}).click();
+    await page.getByRole('button', {name:'Select', exact:true}).first().waitFor();
+    if (await page.getByRole('button', {name:'Use no Profile'}).isDisabled()) {
+      await clickAction(page.getByRole('button', {name:'Select', exact:true}).first(), 'SELECTION_SET');
+      await page.locator('button:enabled').filter({hasText:'Use no Profile'}).waitFor();
+    }
+    const none = await clickAction(page.getByRole('button', {name:'Use no Profile'}), 'SELECTION_SET');
+    assert.equal(none.selection.mode, 'NONE');
+    await page.locator('button:disabled').filter({hasText:'Use no Profile'}).waitFor();
+    const selected = await clickAction(page.getByRole('button', {name:'Select', exact:true}).first(), 'SELECTION_SET');
+    assert.equal(selected.selection.mode, 'SELECTED');
+    assert(selected.selection.selection_revision > none.selection.selection_revision);
+    await page.locator('button:enabled').filter({hasText:'Use no Profile'}).waitFor();
+    await page.getByRole('button', {name:'← Overview', exact:true}).click();
+    const admitted = await clickAction(page.getByRole('button', {name:'Curate completed messages'}), 'CURATION_ADMIT');
+    assert.equal(admitted.batchCount, 1);
+    const status = await clickAction(page.getByRole('button', {name:'Check progress'}), 'CURATION_STATUS');
+    assert.equal(status.receipt.requestId, admitted.requestId);
+  }
   await page.getByRole('button', {name:'Close Dissipative Memory', exact:true}).click();
   await page.getByRole('dialog', {name:'Dissipative Memory settings and status'}).waitFor({state:'hidden'});
   let final;
@@ -71,5 +100,5 @@ export default async function ({ page }) {
     final = await completed(m => m.id !== first.id && m.parentId === first.parentId, 'regenerated sibling');
   }
   await writeFile(saved, JSON.stringify({path:new URL(page.url()).pathname, final:final.id, answer:final.content}));
-  return {real, continuedAndRegenerated:!real, publishedFast:real};
+  return {real, continuedAndRegenerated:!real, profileAndCurationControls:!real, publishedFast:real};
 }

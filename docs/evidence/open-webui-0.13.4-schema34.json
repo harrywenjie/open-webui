@@ -1,0 +1,150 @@
+{
+  "date_utc": "2026-11-21",
+  "candidate": "Open WebUI 0.13.4 / Dissipative Adapter 4.22",
+  "fork_product_commit": "106e98dd4f8b4adb9dc68fe4f367e19d5a311663",
+  "upstream_commit": "0666e59d26a4d056e0bacee41742486badd71cf8",
+  "dissipative_export_commit": "acb4be0a5db015747697974f539dc62a8f9837c6",
+  "exported_files": 26,
+  "wheel": {
+    "filename": "open_webui-0.13.4-py3-none-any.whl",
+    "sha256": "9f1f2b42ba7b5682a4ad98b530680fd2db83d4bd50efdb9ed600d7bd633f7383",
+    "bytes": 110467801
+  },
+  "installation": {
+    "system": "Windows",
+    "python": "3.12.10",
+    "core_initial_state": "empty",
+    "schema": 34,
+    "webui_migration": "d59b632a4c18",
+    "model_profile": "qwen-custom@2",
+    "scope": "dedicated WebUI instance"
+  },
+  "real_provider": {
+    "model": "Qwen-Custom",
+    "inputs": "synthetic",
+    "all_http_status": 200,
+    "calls": {
+      "curator": 1,
+      "chat": 3,
+      "reader": 1
+    },
+    "curator_used_technical_guidance": true,
+    "checks": {
+      "managed_catalog_rejected_before_database": true,
+      "adapter_identity_and_served_icons": true,
+      "empty_core_capabilities_owner_and_archive": true,
+      "none_keeps_archive_recall": true,
+      "profile_cas_ack_none_selected": true,
+      "real_curation": {
+        "state": "COMMITTED",
+        "covered": 2
+      },
+      "browser_1": "PASS",
+      "restarted_core_webui_profile_and_archive": true,
+      "restarted_curation_and_publication": {
+        "covered": 2,
+        "fields": 9,
+        "attributed_fields": 1
+      },
+      "shared_grant_revoked": true,
+      "edit_and_branch_recall_fences": true,
+      "owner_deletion_tombstone": true,
+      "browser_2": "PASS",
+      "fast_publication_revalidation": {
+        "after_restart": "READY",
+        "after_source_edit": "SOURCE_INVALIDATED",
+        "reader_dispatches": 1
+      }
+    }
+  },
+  "loopback_chat": {
+    "model_calls": 3,
+    "checks": {
+      "managed_catalog_rejected_before_database": true,
+      "adapter_identity_and_served_icons": true,
+      "empty_core_capabilities_owner_and_archive": true,
+      "none_keeps_archive_recall": true,
+      "profile_cas_ack_none_selected": true,
+      "fast_cancel_before_dispatch": true,
+      "browser_1": "PASS",
+      "restarted_core_webui_profile_and_archive": true,
+      "fast_cancel_survived_restart": true,
+      "shared_grant_revoked": true,
+      "edit_and_branch_recall_fences": true,
+      "owner_deletion_tombstone": true,
+      "browser_2": "PASS"
+    }
+  },
+  "login_and_appearance": {
+    "migration": {
+      "accounts": 4,
+      "disabled": 1,
+      "roles": {
+        "admin": 1,
+        "user": 2,
+        "pending": 1
+      },
+      "external_bindings": 1,
+      "groups": 1,
+      "memberships": 1,
+      "result": "IMPORTED"
+    },
+    "empty_business_tables": 47,
+    "sum_business_rows_before_provisioning": 0,
+    "sign_in": {
+      "admin": "admin",
+      "member": "user",
+      "pending": "pending",
+      "disabled": "DENIED",
+      "member_oidc": "user"
+    },
+    "modes_per_browser_launch": [
+      "dark",
+      "oled-dark",
+      "light",
+      "her",
+      "system-light",
+      "system-dark"
+    ],
+    "browser_launches": 2,
+    "new_chat": {
+      "stream": "complete",
+      "restart_read": true,
+      "other_user_read": "denied"
+    },
+    "restored_theme_source_hashes": {
+      "open_theme_designer.css": "2b8f80b2cd3b26ce2d68dab491f87dbcbe391fdad24d001c8b29c145092f2591",
+      "open_theme_designer.json": "0a127db8631aaf783a6051fc2b7c49798dc4c37f77b297f40811485fd6c13b03",
+      "open_theme_designer_sections.json": "6aa442233dc063b4fe2860b414c7daecc8f8a374927a56778bc5c1d63e8f11a0",
+      "open_theme_designer_library.json": "fe26bd69806ac0ee32f8c42db58a364dc43dc5405bae63697156191b475966d6"
+    },
+    "data_rift_verified": {
+      "source": 9,
+      "wheel": 9,
+      "installed_per_launch": 17,
+      "http_per_launch": 9
+    }
+  },
+  "local_report_sha256": {
+    "real_qwen": "161f792842ababc39857302e9624bb4e9a04d00bbda95aa213f7c7c03e7f50d2",
+    "loopback_chat": "a9334aa1be8840cb577e258f61b76b4708677d1c0c1aab189ed1aa7511546c70",
+    "login_and_appearance": "6d35fb16826e8eafea4f8b01eff8bf3ff56b1e49f5992da5766e36d00a078368",
+    "browser_controls": "bc35238a5ba323fe550e1270f1f7c0793e04da481823193d8f4647e9ce4fa27e"
+  },
+  "scope_limits": [
+    "Isolated Windows candidate with synthetic accounts and conversations",
+    "Source-format inspection exercised; historical format conversion not needed for the empty Core",
+    "Mac cutover requires separate authorization; WorldHatch runs on its own instance"
+  ],
+  "browser_controls": {
+    "browser": "Chromium",
+    "actions": [
+      "select NONE",
+      "select Profile",
+      "admit curation",
+      "query same receipt"
+    ],
+    "local_curator_response": 503,
+    "external_model_calls": 0
+  }
+}

@@ -144,6 +144,7 @@ class ModelRelay:
                         row["error"] = type(exc).__name__
                         return self.reply(502, b'{"error":"UPSTREAM_UNAVAILABLE"}')
                 if core:
+                    row["status"] = 503
                     return self.reply(503, b'{"error":"LOCAL_MODEL_HAS_NO_CURATOR"}')
                 answer = f"Local rehearsal reply {len(relay.calls)}."
                 if body.get("messages", [{}])[-1].get("role") == "assistant":
