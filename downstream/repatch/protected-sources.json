@@ -1,0 +1,22 @@
+{
+  "repository": "harrywenjie/PrivateOperations",
+  "commit": "340e5c62f61a51d2399ad9390052abb8b183b644",
+  "published_crlf": [
+    "functions/theme_designer_pro_event.py"
+  ],
+  "theme": {
+    "build_theme.py": "c6dcdd162c1e70158e6a7544795b830064214d68321a75c663d6c6c58e8b7afb",
+    "theme-definition.json": "7d6610c9a002fb60607c61f807a796c62ae34df5f12734f31f124af1d75cd3d6",
+    "harrys-ops-deck.css": "998b371166f05759f4053de572b63396d781ad5744b025ea31bb7067e041f0f6",
+    "generated/open_theme_designer.css": "4e0f8a82b811b1034d0fe8452b96e1d053a54766f41ff004ece3d33d096f5c96",
+    "generated/open_theme_designer.json": "dafb54dcc23d13c87b48219111b934594790dfa294cc612fc7956a534aa02c94",
+    "generated/open_theme_designer_sections.json": "5704062108360e791d9e261ce2ab93beb4f3a9e209c10e5fcab0e08645cc14d7",
+    "generated/open_theme_designer_library.json": "502661dcd88a49b7be9e2e1738fa650332d61cded897c77372d2e116e17cccb0"
+  },
+  "functions": {
+    "theme_designer_pro_event.py": "721320f2fa52d2eddb6b4c308eba5f208e99c4d68a04d6bc69b9e65f7dc2a808",
+    "theme-designer-pro-LICENSE": "dfa2ccd5388e46047829a7bf6407f59137fab7233cf4250425450a5e49d0d922",
+    "qwen_custom_reasoning_level.py": "f0be641732a36e03750541fc4138e8954bd9f5a691e2a8d2954828e5e6230f28",
+    "qwen_custom_task_presets.py": "3baf5e34bfb7b5cd9ba7182797793af5e2a72ee4aabb02aa7b56a34bafb1c615"
+  }
+}

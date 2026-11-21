@@ -1,5 +1,7 @@
 # Open WebUI 全面升级开发计划
 
+本页保留 2026-11-21 的计划与当时的资格边界。Mac 4.22 窗口已完成。[当次实装](https://github.com/harrywenjie/PrivateOperations/blob/340e5c62f61a51d2399ad9390052abb8b183b644/servers/192.168.1.60/reports/2026-11-21-webui-422-cutover.md) · [后续同步手册](upstream-sync.md)
+
 2026-11-21，维护者决定同步官方主线，接入新版 Dissipative 连续记忆。此次切换从空的 WebUI 与专用 Core 库启用，只迁用户登录信息，放弃回退。自定义图标与主题是每次升级都要交付的实例功能。当前进度归[开发入口](../DEVELOPMENT.md)，长期要求归[仓库规则](../../AGENTS.md#所有升级和更新均须保留自定义图标与主题)。
 
 ## 起点和目标版本

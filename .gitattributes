@@ -50,3 +50,5 @@
 # Exact manifest-pinned branding bytes on every workstation.
 static/static/favicon.svg -text
 downstream/branding/*.svg -text
+downstream/branding/assets/* -text
+downstream/repatch/webui.patch -text whitespace=-trailing-space,-space-before-tab,-blank-at-eof
