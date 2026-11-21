@@ -4,17 +4,17 @@
 
 2026-11-21，维护者决定把此 fork 同步到官方 `open-webui/open-webui:main`，接入新版 Dissipative 连续记忆。此次切换仅保留用户登录所需信息，允许重新登录，旧聊天和派生记忆从空库开始，故障时向前修复。所有升级均须保留自定义图标与实例主题。[仓库规则](../AGENTS.md#所有升级和更新均须保留自定义图标与主题) · [本次计划](development/open-webui-upgrade-2026-11.md)
 
-2026-11-21 开工时从远端核实已发布分支 `codex/dissipative-online` 为 `3ae22bd845767de1ed201498fe2810ffa3daa511`，其产品基线为 `5a3026ed4`（0.11.4 / Adapter 4.20）。隔离候选 `codex/dissipative-upgrade-20261121` 已合并当天冻结的官方主线 `0666e59d26a4d056e0bacee41742486badd71cf8`（0.13.4），适配器标识为 4.21。已核对源码图标、主题生成物及补丁路径。候选构建、组合验收、登录演练和生产窗口分别登记。[同步记录](../downstream/upgrade-20261121.md) · [下游清单](../downstream/adapter.json)
+从已发布 fork `3ae22bd84` 建立的候选在 `31b109a08` 合并了开工时冻结的官方主线 `0666e59d26a4d056e0bacee41742486badd71cf8`。Open WebUI 0.13.4 / Adapter 4.21 的 wheel 已在隔离环境安装。Data Rift 图标、Harry's Ops Deck 的浏览器外观与重启、仅登录迁移均有合成演练证据。Dissipative 的 24 个导出文件来自该合并提交。已发布产品基线为 0.11.4 / Adapter 4.20。[候选与验证记录](../downstream/upgrade-20261121.md) · [下游清单](../downstream/adapter.json)
 
 ## 下一任务卡
 
 | 工作包 | 必读输入 | 交付与通过条件 |
 | --- | --- | --- |
-| 首个检查点：上游同步 | [同步步骤](development/open-webui-upgrade-2026-11.md#上游同步)、[外观验收](development/open-webui-upgrade-2026-11.md#图标与主题验收) | 从已发布下游分支建立隔离候选，冻结官方 SHA，保留两条祖先，审阅自动合并和冲突。逐项说明八处补丁、overlay、图标及主题的去向，以 fork 正常入口与候选构建验证 |
-| 客户端接入与身份迁移 | [连续记忆接线](development/open-webui-upgrade-2026-11.md#新版记忆接入)、[登录迁移](development/open-webui-upgrade-2026-11.md#登录信息最小迁移) | 实测独立模型配置和新协议，用合成账号完成可重复的登录迁移，新库只承接登录信息，重新配置实例外观 |
-| 候选资格与切换 | [演练及窗口](development/open-webui-upgrade-2026-11.md#候选资格与-mac-窗口) | wheel、浏览器、真实客户端与已授权模型实测均有证据。独立演练成功后进入获准的生产窗口，现场核实后登记实际安装 |
+| 新版连续记忆客户端 | [协议及独立 Core 配置](development/open-webui-upgrade-2026-11.md#新版记忆接入) | 在 WebUI 专用空 Core 上完成能力协商、可信来源事件、每轮归档、显式整理、Profile 选择、召回与撤权；按当前合同验证隔离、重试和重启 |
+| 下游正常入口与组合演练 | [上游同步第 3 项](development/open-webui-upgrade-2026-11.md#上游同步)、[演练及窗口](development/open-webui-upgrade-2026-11.md#候选资格与-mac-窗口) | 普通流式聊天、隔离与重启回读已通过回环模型。接入专用 Core 后验证 Continue、再生成、编辑、分支、删除、FAST、插件挂载、重启回读新记忆与已选 Profile，完成获准的模型调用 |
+| Mac 切换 | [登录迁移边界](development/open-webui-upgrade-2026-11.md#登录信息最小迁移)、[生产窗口](development/open-webui-upgrade-2026-11.md#候选资格与-mac-窗口) | 组合演练通过后取得窗口授权，复核现场启用的登录方式和专属服务，依本次向前修复决定实施 |
 
-当前首要兼容问题是 Core 的 Continuity 模式与旧 managed catalog 启动参数互斥。开工时还需复核上游认证 schema、消息持久化回调，以及 Theme Designer Pro 的样式和脚本能否在新的页面结构上加载。历史安装或单项离线测试各按其原始范围解释。
+现有记忆客户端仍使用旧协议路由。下一包从专用 schema 34 与独立模型配置开始，旧 managed catalog 启动参数与该模式互斥。现场 Mac 与 WorldHatch 位于此候选运行边界之外。
 
 ## 下游已有行为
 

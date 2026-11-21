@@ -1,0 +1,160 @@
+{
+  "date_utc": "2026-11-21",
+  "source_commit": "31b109a08841e9b540cba063f8f116b5aa440e36",
+  "dissipative_export_commit": "0da93808cb660a4cedcb6d6a773b409b9ae0a3fd",
+  "wheel": {
+    "filename": "open_webui-0.13.4-py3-none-any.whl",
+    "bytes": 110466526,
+    "sha256": "91af98d7adb1073855f0c852bed170063b910f4f4ad668aec8eac0df7a98091e"
+  },
+  "environment": {
+    "webui": "installed wheel on Windows, Python 3.12.10",
+    "identity_provider": "loopback synthetic OIDC",
+    "chat_provider": "loopback synthetic OpenAI-compatible stream"
+  },
+  "login_migration": {
+    "accounts": 4,
+    "disabled": 1,
+    "roles": {
+      "admin": 1,
+      "user": 2,
+      "pending": 1
+    },
+    "external_bindings": 1,
+    "groups": 1,
+    "memberships": 1,
+    "result": "IMPORTED"
+  },
+  "empty_before_instance_provisioning": {
+    "chat": 0,
+    "chatidtag": 0,
+    "document": 0,
+    "function": 0,
+    "memory": 0,
+    "config_old": 0,
+    "tag": 0,
+    "feedback": 0,
+    "folder": 0,
+    "message": 0,
+    "message_reaction": 0,
+    "oauth_session": 0,
+    "api_key": 0,
+    "channel_webhook": 0,
+    "channel_file": 0,
+    "chat_file": 0,
+    "prompt_history": 0,
+    "chat_message": 0,
+    "access_grant": 0,
+    "knowledge": 0,
+    "prompt": 0,
+    "tool": 0,
+    "model": 0,
+    "channel": 0,
+    "file": 0,
+    "skill": 0,
+    "automation": 0,
+    "automation_run": 0,
+    "shared_chat": 0,
+    "calendar": 0,
+    "calendar_event": 0,
+    "calendar_event_attendee": 0,
+    "pinned_note": 0,
+    "note": 0,
+    "knowledge_directory": 0,
+    "knowledge_file": 0,
+    "skill_history": 0,
+    "model_history": 0,
+    "tool_history": 0,
+    "function_history": 0,
+    "app": 0,
+    "channel_member": 0,
+    "comment": 0,
+    "comment_reaction": 0,
+    "notification": 0,
+    "auth_session": 0,
+    "chat_view_state": 0
+  },
+  "observed_signins": {
+    "admin": "admin",
+    "member": "user",
+    "pending": "pending",
+    "disabled": "DENIED",
+    "member_oidc": "user"
+  },
+  "branding": {
+    "source": 9,
+    "wheel": 9,
+    "installed_per_start": 17,
+    "http_per_start": 9
+  },
+  "theme_artifact_sha256": {
+    "open_theme_designer.css": "2b8f80b2cd3b26ce2d68dab491f87dbcbe391fdad24d001c8b29c145092f2591",
+    "open_theme_designer.json": "0a127db8631aaf783a6051fc2b7c49798dc4c37f77b297f40811485fd6c13b03",
+    "open_theme_designer_sections.json": "6aa442233dc063b4fe2860b414c7daecc8f8a374927a56778bc5c1d63e8f11a0",
+    "open_theme_designer_library.json": "fe26bd69806ac0ee32f8c42db58a364dc43dc5405bae63697156191b475966d6"
+  },
+  "browser": {
+    "starts": 2,
+    "modes_per_start": {
+      "dark": {
+        "canvas": "rgb(11, 18, 30)",
+        "text": "rgb(232, 238, 248)",
+        "grid": true,
+        "theme": "dark",
+        "accent": "#58e6ff"
+      },
+      "oled-dark": {
+        "canvas": "rgb(0, 0, 0)",
+        "text": "rgb(232, 238, 248)",
+        "grid": true,
+        "theme": "oled-dark",
+        "accent": "#58e6ff"
+      },
+      "light": {
+        "canvas": "rgb(245, 248, 252)",
+        "text": "rgb(30, 41, 59)",
+        "grid": true,
+        "theme": "light",
+        "accent": "#007f9c"
+      },
+      "her": {
+        "canvas": "rgb(244, 233, 227)",
+        "text": "rgb(61, 40, 34)",
+        "grid": true,
+        "theme": "her",
+        "accent": "#983724"
+      },
+      "system-light": {
+        "canvas": "rgb(245, 248, 252)",
+        "text": "rgb(30, 41, 59)",
+        "grid": true,
+        "theme": "system",
+        "accent": "#007f9c"
+      },
+      "system-dark": {
+        "canvas": "rgb(11, 18, 30)",
+        "text": "rgb(232, 238, 248)",
+        "grid": true,
+        "theme": "system",
+        "accent": "#58e6ff"
+      }
+    },
+    "document_icons": [
+      "/static/favicon.png",
+      "/static/favicon-96x96.png",
+      "/static/favicon.svg",
+      "/static/favicon.ico",
+      "/static/apple-touch-icon.png",
+      "/manifest.json",
+      "/static/favicon.png"
+    ],
+    "restart_initial_theme": "her",
+    "hud_visible_per_mode": true,
+    "screenshots": 14
+  },
+  "new_chat": {
+    "stream": "complete",
+    "restart_read": true,
+    "other_user_read": "denied"
+  }
+}
