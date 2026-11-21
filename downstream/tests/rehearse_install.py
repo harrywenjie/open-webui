@@ -257,7 +257,8 @@ def api_checks():
         assert identity["permissions"]["workspace"]["tools"] is True
         roles["member_oidc"] = "user"
     code, body = request("/api/version")
-    assert code == 200 and json.loads(body)["deployment_id"] == "dissipative-adapter-4.21"
+    adapter = json.loads((FORK / "downstream/adapter.json").read_text(encoding="utf8"))["adapter_version"]
+    assert code == 200 and json.loads(body)["deployment_id"] == adapter
     for url, marker in (
         ("/static/custom.css", b"owui-theme-designer-pro"),
         ("/static/loader.js", b"owui-theme-designer-pro"),

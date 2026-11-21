@@ -42,7 +42,7 @@ export default async function ({ page }) {
   if (process.env.OWUI_PROBE_RUN === '2') {
     const state = JSON.parse(await readFile(saved, 'utf8'));
     await page.goto(base + state.path);
-    const msg = await completed(m => m.id === state.final);
+    const msg = await completed(m => m.id === state.final && (!real || m.content === state.answer));
     assert(msg.content.length > 0);
     return {browserRestart:true};
   }
@@ -52,11 +52,14 @@ export default async function ({ page }) {
   await hud.click();
   await page.getByRole('button', {name:'Curate completed messages'}).waitFor({timeout:20000});
   await page.screenshot({path:path.join(lab, 'continuity-hud.png')});
-  await page.keyboard.press('Escape');
+  await page.getByRole('button', {name:'Close Dissipative Memory', exact:true}).click();
+  await page.getByRole('dialog', {name:'Dissipative Memory settings and status'}).waitFor({state:'hidden'});
   let final;
   if (real) {
     await send("Use answer_from_chat_memory_v2 to verify the earlier Lantern project marker. Use EXPLICIT_MEMORY_ONLY. Return just its publication marker.");
-    final = await completed(m => m.id !== first.id);
+    // The streamed completion can be marked done before the server-side outlet saves its publication.
+    final = await completed(m => m.id !== first.id && m.content.includes('cobalt-tamarind-726') &&
+      !m.content.includes('[[CHAT_MEMORY_PUBLICATION:'), 'verified FAST publication');
     const output = final.output ?? [];
     const tool = output.find(o => o.type === 'function_call' && o.name === 'answer_from_chat_memory_v2');
     assert(tool, 'Real chat did not invoke the mounted FAST tool');
@@ -65,10 +68,8 @@ export default async function ({ page }) {
     await page.getByRole('button', {name:'Continue Response', exact:true}).last().click();
     await completed(m => m.id === first.id && m.content.length > first.content.length, 'continuation');
     await page.getByRole('button', {name:'Regenerate', exact:true}).last().click();
-    const again = page.getByRole('button', {name:'Try Again', exact:true});
-    await again.click({timeout:10000});
     final = await completed(m => m.id !== first.id && m.parentId === first.parentId, 'regenerated sibling');
   }
-  await writeFile(saved, JSON.stringify({path:new URL(page.url()).pathname, final:final.id}));
+  await writeFile(saved, JSON.stringify({path:new URL(page.url()).pathname, final:final.id, answer:final.content}));
   return {real, continuedAndRegenerated:!real, publishedFast:real};
 }

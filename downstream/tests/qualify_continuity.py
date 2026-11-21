@@ -69,7 +69,7 @@ def provision(folder, core):
             email = name + "@example.org"
             password = bcrypt.hashpw(install.PASSWORD.encode(), bcrypt.gensalt()).decode()
             db.execute("INSERT INTO user(id,email,name,role,profile_image_url,settings,last_active_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)",
-                       (uid, email, name, role, "/user.png", "{}", now, now, now))
+                       (uid, email, name, role, "/user.png", '{"ui":{"regenerateMenu":false}}', now, now, now))
             db.execute("INSERT INTO auth(id,email,password,active) VALUES(?,?,?,1)", (uid, email, password))
     install.provision_theme(folder)
     with sqlite3.connect(folder / "webui.db") as db:
@@ -126,6 +126,8 @@ class ModelRelay:
                 role = "curator" if b"CURATOR_INPUT_DATA" in wire and core else "reader" if core else "chat"
                 row = {"role": role, "request_bytes": size, "request_sha256": hashlib.sha256(wire).hexdigest(),
                        "chat_filter": b"chat-memory-control" in wire, "stream": bool(body.get("stream"))}
+                if role == "curator":
+                    row["technical_profile_guidance"] = b"technical" in wire and b"global_guidance" in wire
                 with relay.lock:
                     if relay.connection and sum(r["role"] == role for r in relay.calls) >= {"curator": 2, "reader": 2, "chat": 6}[role]:
                         return self.reply(429, b'{"error":"QUALIFICATION_BUDGET"}')
@@ -181,6 +183,69 @@ def service(args, env, log, ready):
         except subprocess.TimeoutExpired:
             proc.kill()
             proc.wait(timeout=10)
+
+
+async def check_fast_barrier(chat, user, assistant, issued, action):
+    """Drive the installed Tool seam with one synthetic, server-owned attempt across a restart."""
+    from open_webui.routers.dissipative_memory import fast_for_chat
+
+    result = await fast_for_chat(ID, chat, action, {
+        "current_message_id": user, "assistant_message_id": assistant, "request_id": "message:" + assistant,
+        "request_issued_at": float(issued), "candidate_model_id": MODEL, "integration_id": "dissipative-fast-client-v1",
+        "memory_request_kind": "EXPLICIT_MEMORY_ONLY", "task_handoff": "",
+    })
+    if action == "cancel":
+        assert result["state"] == "CANCEL_REQUESTED"
+    else:
+        assert not result.get("publication_handle")
+
+
+def verify_fast_barrier(lab, web_env, number, result):
+    chat, user, assistant = json.loads((lab / "client-chat.json").read_text())
+    clock = lab / "cancel-issued.json"
+    if number == 1:
+        clock.write_text(json.dumps(time.time()))
+    command = "import asyncio,sys; from qualify_continuity import check_fast_barrier; asyncio.run(check_fast_barrier(*sys.argv[1:]))"
+    subprocess.run([sys.executable, "-c", command, chat, user, assistant, clock.read_text(),
+                    "cancel" if number == 1 else "answer"], cwd=Path(__file__).parent, env=web_env,
+                   check=True, stdout=subprocess.DEVNULL, timeout=60)
+    with sqlite3.connect(lab / "core.db") as db:
+        state = db.execute("SELECT state,dispatch_count FROM fast_request_attempts WHERE chat_id=? AND request_id=?",
+                           (chat, "message:" + assistant)).fetchall()
+    assert state == [("CANCELLED", 0)], state
+    result["checks"]["fast_cancel_before_dispatch" if number == 1 else "fast_cancel_survived_restart"] = True
+
+
+def verify_saved_fast(lab, key, result):
+    """Recheck the browser's actual publication against an edit to its original source."""
+    state = json.loads((lab / "browser-chat.json").read_text(encoding="utf8"))
+    token = ok(install.request("/api/v1/auths/signin", {"email": "admin@example.org", "password": install.PASSWORD}))["token"]
+    chat = state["path"].split("/")[-1]
+    route = install.BASE + "/api/v1/chats/" + chat
+    history = ok(http(route, token=token))["chat"]["history"]["messages"]
+    final = history[state["final"]]
+    call = next(i for i in final["output"] if i.get("name") == "answer_from_chat_memory_v2")
+    envelope = next(i for i in final["output"] if i["type"] == "function_call_output" and i["call_id"] == call["call_id"])
+    handle = json.loads(envelope["output"][0]["text"])["publication_handle"]
+    with sqlite3.connect(lab / "core.db") as db:
+        current, dispatches = db.execute("SELECT current_message_id,dispatch_count FROM fast_request_attempts "
+            "WHERE instance_id=? AND owner_id=? AND chat_id=? AND assistant_message_id=?", (INSTANCE, ID, chat, final["id"])).fetchone()
+    assert dispatches == 1
+    boundary = dict(api_version="dissipative.client.v1", protocol="dissipative.continuity.v2",
+        transport_version="dissipative.continuity.transport.v1", instance_id=INSTANCE, owner_id=ID, chat_id=chat,
+        request_id="message:" + final["id"], current_message_id=current, assistant_message_id=final["id"],
+        candidate_model_id=MODEL, integration_id="dissipative-fast-client-v1", call_id=call["call_id"], publication_handle=handle)
+    def publication():
+        return ok(http(CORE_URL + "/v1/continuity/fast-answer/publication", boundary, key))["result"]
+    before = publication()
+    if before["state"] == "READY":
+        assert before["answer_markdown"] == state["answer"]
+    original = next(m for m in history.values() if m["role"] == "user" and MARKER in m["content"])
+    ok(http(route + "/messages/" + original["id"], {"content": "The earlier marker was withdrawn."}, token))
+    after = publication()
+    assert after["state"] != "READY" and MARKER not in str(after.get("answer_markdown") or "")
+    result["checks"]["fast_publication_revalidation"] = {"after_restart": before["state"], "after_source_edit": after["state"],
+                                                        "reader_dispatches": dispatches}
 
 
 def run(args):
@@ -256,7 +321,7 @@ def run(args):
                             assert db.execute("PRAGMA user_version").fetchone()[0] == 34
                             if run_number == 1:
                                 assert db.execute("SELECT count(*) FROM scopes").fetchone() == (0,)
-                        verify(args, lab, key, result, run_number)
+                        verify(args, lab, key, result, run_number, web_env)
                         if args.browser_runner:
                             env = dict(os.environ, OWUI_FIXTURE_PASSWORD=install.PASSWORD, OWUI_SCREENSHOTS=str(lab),
                                        OWUI_PROBE_RUN=str(run_number), OWUI_REAL=str(int(args.real)))
@@ -265,6 +330,10 @@ def run(args):
                                     "--script", str(Path(__file__).with_name("continuity-chat.mjs")), "--text-chars", "0"],
                                     env=env, stdout=log, stderr=log, timeout=430, check=True)
                             result["checks"]["browser_" + str(run_number)] = "PASS"
+                            if args.real and run_number == 2:
+                                count = len(relay.calls)
+                                verify_saved_fast(lab, key, result)
+                                assert len(relay.calls) == count
             finally:
                 listener.shutdown()
     finally:
@@ -273,7 +342,7 @@ def run(args):
     print(json.dumps(result["checks"], ensure_ascii=False))
 
 
-def verify(args, lab, key, result, number):
+def verify(args, lab, key, result, number, web_env):
     assert ok(http(install.BASE + "/api/version"))["deployment_id"] == "dissipative-adapter-4.22"
     subprocess.run([sys.executable, str(install.FORK / "downstream/verify_branding.py"), "--url", install.BASE],
                    check=True, stdout=subprocess.DEVNULL)
@@ -303,6 +372,9 @@ def verify(args, lab, key, result, number):
     caps = ok(manage("CONTINUITY_CAPABILITIES"))
     assert caps["source-format-transition"]["schema"] == 34 and caps["capabilities"]["fastReader"] == "ENABLED"
     assert manage("SELECTION_GET", who=member)[0] == 404
+    inspected = ok(manage("FORMAT_INSPECT"))
+    assert inspected["snapshotHash"].startswith("sha256:") and inspected["metadataHash"].startswith("sha256:")
+    assert manage("FORMAT_INSPECT", who=member)[0] == 404
     status = ok(manage("STATUS"))
     assert status.get("continuity") is True, status.get("state")
     with sqlite3.connect(lab / "core.db") as db:
@@ -323,6 +395,8 @@ def verify(args, lab, key, result, number):
                      profile_revision=1, expectedSelectionRevision=receipt["selection"]["selection_revision"])))
         assert selected["selection"]["profile_id"] == "technical"
         result["checks"]["profile_cas_ack_none_selected"] = True
+        if not args.real:
+            verify_fast_barrier(lab, web_env, number, result)
         if args.real:
             req = {"requestId": "fixture-curation"}
             accepted = ok(manage("CURATION_ADMIT", req))
@@ -338,12 +412,21 @@ def verify(args, lab, key, result, number):
         assert ok(manage("SELECTION_GET"))["selection"]["profile_id"] == "technical"
         result["checks"]["restarted_core_webui_profile_and_archive"] = True
         assert search(MARKER)["results"]
+        if not args.real:
+            verify_fast_barrier(lab, web_env, number, result)
         if args.real:
             job = ok(manage("CURATION_STATUS", {"requestId": "fixture-curation"}))
             assert job["state"] == "COMMITTED" and len(job["publishedCoverage"]) == 2
             publication = ok(manage("PUBLICATION_GET"))
             assert publication["selection"]["profile_id"] == "technical"
-            result["checks"]["restarted_curation_and_publication"] = {"covered": 2, "fields": len(publication["fields"])}
+            available = [f for f in publication["fields"] if f["availability"] == "AVAILABLE"]
+            for field in available:
+                origin = field["publication"]
+                assert origin["jobId"] and origin["inputHash"] and origin["responseHash"] and field["supportingSources"]
+                historical = ok(manage("PUBLICATION_GET", {"jobId": origin["jobId"]}))
+                assert any(f["fieldId"] == field["fieldId"] and f["value"] == field["value"] for f in historical["fields"])
+            result["checks"]["restarted_curation_and_publication"] = {
+                "covered": 2, "fields": len(publication["fields"]), "attributed_fields": len(available)}
         route = install.BASE + "/api/v1/chats/" + chat
         # Grant and revoke using the actual share routes; memory remains owner-scoped throughout.
         share = ok(http(route + "/share", {}, token))

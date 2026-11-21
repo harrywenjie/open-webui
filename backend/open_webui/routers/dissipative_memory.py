@@ -303,7 +303,8 @@ async def fast_for_chat(owner_id: str, chat_id: str, action: str, request: dict)
         user_id = request.get("current_message_id")
         if rows[slot]["parent_message_id"] != user_id or rows[slot]["role"] != "assistant" or rows[user_id]["role"] != "user":
             raise ChatMemoryClientError(409, "FAST_TURN_CHANGED")
-        if action == "answer":
+        if action in {"answer", "cancel"}:
+            # Core binds even a pre-dispatch cancellation to the trusted user's content hash.
             body["current_request"] = rows[user_id]["content"]
         body["assistant_message_id"] = slot
         if "request_issued_at" in body:
