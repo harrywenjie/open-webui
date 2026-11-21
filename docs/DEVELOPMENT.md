@@ -10,7 +10,7 @@ Open WebUI 0.13.4 / Adapter 4.22 已于 2026-11-21 在 Mac 开放，产品提交
 
 本次 Mac 窗口已完成，没有待执行的切换步骤。需要处理本次安装的故障时，从[向前修复与备份](https://github.com/harrywenjie/PrivateOperations/blob/main/servers/192.168.1.60/reports/2026-11-21-webui-422-cutover.md#forward-repair-and-backups)进入。新的产品改动按[升级计划](development/open-webui-upgrade-2026-11.md)重新验收。
 
-WorldHatch 使用其原有独立实例。仅在重新打包或更换模型、插件及主题时，复跑受影响的[候选验收](../downstream/upgrade-20261121.md#schema-34-客户端)。
+连续记忆采用 WebUI 自有实例和独立推理配置。WorldHatch 继续使用原有独立实例。重新打包或更换模型、插件及主题时，复跑受影响的[候选验收](../downstream/upgrade-20261121.md#schema-34-客户端)。
 
 ## 下游已有行为
 
