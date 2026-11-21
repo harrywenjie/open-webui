@@ -14,7 +14,7 @@
 | 下游正常入口与组合演练 | [上游同步第 3 项](development/open-webui-upgrade-2026-11.md#上游同步)、[演练及窗口](development/open-webui-upgrade-2026-11.md#候选资格与-mac-窗口) | 普通流式聊天、隔离与重启回读已通过回环模型。接入专用 Core 后验证 Continue、再生成、编辑、分支、删除、FAST、插件挂载、重启回读新记忆与已选 Profile，完成获准的模型调用 |
 | Mac 切换 | [登录迁移边界](development/open-webui-upgrade-2026-11.md#登录信息最小迁移)、[生产窗口](development/open-webui-upgrade-2026-11.md#候选资格与-mac-窗口) | 组合演练通过后取得窗口授权，复核现场启用的登录方式和专属服务，依本次向前修复决定实施 |
 
-现有记忆客户端仍使用旧协议路由。下一包从专用 schema 34 与独立模型配置开始，旧 managed catalog 启动参数与该模式互斥。现场 Mac 与 WorldHatch 位于此候选运行边界之外。
+Adapter 4.22 候选增加 WebUI 专用的 schema 34 客户端。隔离预检已验证独立空库、归档、Profile CAS 与重启。真实 Qwen Curator 第一次完成两项来源的整理，FAST 首测在 Reader 派发前被 v2 拒绝。候选已将服务端签发的时间戳按原精度以文本传输，待完整安装组合复验。[接入配置与验证](../downstream/upgrade-20261121.md#schema-34-客户端)
 
 ## 下游已有行为
 

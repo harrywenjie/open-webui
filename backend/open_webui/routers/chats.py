@@ -1248,8 +1248,10 @@ async def unshare_all_chats(
 
     # Clear share_id on the original chats and remove access grants
     for chat_id in chat_ids:
-        await Chats.update_chat_share_id_by_id(chat_id, None, db=db)
+        changed = await Chats.update_chat_share_id_by_id(chat_id, None, db=db)
         await AccessGrants.set_access_grants('shared_chat', chat_id, [], db=db)
+        if changed:
+            await sync_continuity_source(changed)
 
     if result:
         await publish_event(
@@ -1495,6 +1497,13 @@ async def get_chat_by_id(
 # Update Chat By Id
 
 
+async def sync_continuity_source(chat):
+    from open_webui.routers import dissipative_memory
+
+    if dissipative_memory.continuity_enabled():
+        await dissipative_memory.reconcile_hint(chat.user_id, chat.id)
+
+
 @router.post('/{id}', response_model=ChatAccessResponse | None)
 async def update_chat_by_id(
     request: Request,
@@ -1538,6 +1547,8 @@ async def update_chat_by_id(
                 or chat
             )
 
+        if touch:
+            await sync_continuity_source(chat)
         await publish_event(
             request,
             EVENTS.CHAT_UPDATED,
@@ -1649,6 +1660,8 @@ async def update_chat_message_by_id(
             }
         )
 
+    if form_data.content is not None:
+        await sync_continuity_source(chat)
     await publish_event(
         request,
         EVENTS.MESSAGE_UPDATED,
@@ -1688,6 +1701,7 @@ async def delete_chat_message_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
+    await sync_continuity_source(chat)
     await publish_event(
         request,
         EVENTS.MESSAGE_DELETED,
@@ -1788,8 +1802,14 @@ async def delete_chat_by_id(
     await Chats.delete_orphan_tags_for_user(chat.meta.get('tags', []), chat.user_id, threshold=1, db=db)
 
     # Cascade to internal child chats spawned from this one.
+    from open_webui.routers import dissipative_memory
+
+    if dissipative_memory.continuity_enabled():
+        await dissipative_memory.delete_chat_memory(chat.user_id, id)
     for child_id in await Chats.get_internal_chat_ids_by_parent_id(id, chat.user_id):
         await stop_item_tasks(request.app.state.redis, child_id)
+        if dissipative_memory.continuity_enabled():
+            await dissipative_memory.delete_chat_memory(chat.user_id, child_id)
         await Chats.delete_chat_by_id_and_user_id(child_id, chat.user_id)
 
     if user.role == 'admin':
@@ -2170,6 +2190,7 @@ async def share_chat_by_id(
         shared = await SharedChats.update(chat.share_id, form_data, db=db)
         if shared:
             chat = await Chats.get_chat_by_id(id, db=db)
+            await sync_continuity_source(chat)
             await publish_event(
                 request,
                 EVENTS.CHAT_SHARED,
@@ -2188,6 +2209,7 @@ async def share_chat_by_id(
     if not chat:
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=ERROR_MESSAGES.DEFAULT())
 
+    await sync_continuity_source(chat)
     await publish_event(
         request,
         EVENTS.CHAT_SHARED,
@@ -2215,6 +2237,7 @@ async def delete_shared_chat_by_id(
         await Chats.update_chat_share_id_by_id(id, None, db=db)
 
     await AccessGrants.set_access_grants('shared_chat', id, [], db=db)
+    await sync_continuity_source(chat)
 
     await publish_event(
         request,
@@ -2268,6 +2291,7 @@ async def update_shared_chat_access_by_id(
 
     await refresh_chat_access(id)
 
+    await sync_continuity_source(chat)
     return ChatResponse.model_validate(chat, from_attributes=True)
 
 

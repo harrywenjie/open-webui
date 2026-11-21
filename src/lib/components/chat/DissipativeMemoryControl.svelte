@@ -66,6 +66,7 @@
   let nextScopeKey = "";
   let previousEnabledMode = "NORMAL";
   let autonomousPending = false;
+  let curationPending = false;
   let mounted = false;
 
   const token = () => localStorage.token ?? "";
@@ -200,6 +201,7 @@
 
   function statusIdentityMatches(left: any, right: any) {
     return left?.profile?.profile_id === right?.profile?.profile_id
+      && left?.authorization_revision === right?.authorization_revision
       && left?.profile?.revision === right?.profile?.revision
       && left?.profile?.profile_hash === right?.profile?.profile_hash
       && left?.profile_selection_revision === right?.profile_selection_revision
@@ -263,6 +265,7 @@
       return true;
     } catch (e: any) {
       if (isCurrent(scope, generation) && readGeneration === profileReadGeneration) {
+        if (expectedStatus.continuity) profileState = null;
         profileStateError = e?.detail ?? "Profile State is unavailable";
       }
     }
@@ -609,6 +612,36 @@
     }
   }
 
+  async function curate(checkOnly = false) {
+    if (!usableScope() || curationPending) return;
+    const scope = chatId;
+    const generation = requestGeneration;
+    const key = "dissipative-curation:" + scope;
+    let requestId = localStorage.getItem(key);
+    if (checkOnly && !requestId) return;
+    curationPending = true;
+    error = "";
+    try {
+      if (!checkOnly && (!requestId || localStorage.getItem(key + ":settled") === requestId)) {
+        requestId = crypto.randomUUID();
+        localStorage.setItem(key, requestId);
+      }
+      if (!checkOnly) await scopedCall(scope, "CURATION_ADMIT", { requestId });
+      const result = await scopedCall(scope, "CURATION_STATUS", { requestId });
+      if (!isCurrent(scope, generation)) return;
+      if (result.receipt.disposition === "NO_NEW_SOURCES" || ["COMMITTED", "FAILED", "UNKNOWN", "DEGRADED", "PARTIAL"].includes(result.state)) {
+        localStorage.setItem(key + ":settled", requestId!);
+      }
+      notice = result.receipt.disposition === "NO_NEW_SOURCES" ? "No new completed messages." :
+        `Curation: ${result.state} · ${result.covered.length} sources covered, ${result.gap.length} pending or uncovered.`;
+      await refreshHud();
+    } catch (e: any) {
+      if (isCurrent(scope, generation)) error = e?.detail ?? "Curation status unavailable";
+    } finally {
+      curationPending = false;
+    }
+  }
+
   async function selectProfile(profile: any) {
     if (!usableScope()) return;
     const scope = chatId;
@@ -616,7 +649,14 @@
     error = "";
     notice = "";
     try {
-      await scopedCall(scope, "PROFILE_SELECT", { profile_id: profile.profile_id, revision: profile.revision });
+      if (status.continuity) {
+        await scopedCall(scope, "SELECTION_SET", {
+          requestId: crypto.randomUUID(), expectedSelectionRevision: status.selection.selection_revision,
+          mode: profile.profile_id ? "SELECTED" : "NONE", profile_id: profile.profile_id, profile_revision: profile.revision
+        });
+      } else {
+        await scopedCall(scope, "PROFILE_SELECT", { profile_id: profile.profile_id, revision: profile.revision });
+      }
       if (!isCurrent(scope, generation)) return;
       profileState = null;
       profileReadGeneration += 1;
@@ -819,6 +859,12 @@
             {/each}
           </div>
         </div>
+        {#if status.continuity}
+          <section class="mb-3 flex items-center gap-2" aria-label="Explicit curation">
+            <button type="button" class="rounded border px-3 py-1.5 text-sm" disabled={curationPending || status.mode !== "NORMAL"} on:click={() => curate()}>Curate completed messages</button>
+            <button type="button" class="rounded border px-3 py-1.5 text-sm" disabled={curationPending || !localStorage.getItem("dissipative-curation:" + chatId)} on:click={() => curate(true)}>Check progress</button>
+          </section>
+        {:else}
         <section class="mb-3 flex items-center justify-between gap-3 rounded-xl border border-gray-200 p-3 dark:border-gray-700" data-testid="autonomous-writing-control">
           <div class="min-w-0">
             <h3 class="text-sm font-semibold">Autonomous long-term memory</h3>
@@ -834,6 +880,7 @@
             on:click={() => setAutonomousWriting(!status.autonomous_writing_enabled)}
           >{autonomousPending ? "Saving…" : status.autonomous_writing_enabled ? "On" : "Off"}</button>
         </section>
+        {/if}
         <section class="mb-3 border-t border-gray-200 pt-3 dark:border-gray-700" data-testid="dissipative-profile-state">
           <div class="mb-2 flex items-start justify-between gap-2 px-1">
             <div>
@@ -845,7 +892,7 @@
             {/if}
           </div>
           {#if profileStateError}
-            <div class="ops-memory-alert ops-memory-alert--warning mb-2 rounded-lg p-2 text-xs" role="status">{profileStateError}. Last loaded values are retained.</div>
+            <div class="ops-memory-alert ops-memory-alert--warning mb-2 rounded-lg p-2 text-xs" role="status">{profileStateError}{status.continuity ? "." : ". Last loaded values are retained."}</div>
           {/if}
           {#if profileState}
             <div data-profile-id={profileState.profile_id} data-profile-revision={profileState.profile_revision} data-selection-revision={profileState.selection_revision}>
@@ -913,6 +960,9 @@
           <ProfileEditor bind:draft={editor} {savedIds} {validation} on:preview={preview} on:save={save} />
         {:else}
           <div class="mb-2 flex items-center justify-between gap-2"><h3 class="font-semibold">Profile Management</h3><button type="button" class="rounded-lg border px-3 py-1.5 text-sm" on:click={() => { editor = blank(); savedIds = []; }}>+ New custom Profile</button></div>
+          {#if status.continuity}
+            <button type="button" class="mb-2 rounded border px-3 py-1.5 text-sm" disabled={status.selection?.mode === "NONE"} on:click={() => selectProfile({ profile_id: null, revision: null, display_name: "None" })}>Use no Profile</button>
+          {/if}
           {#if profiles.length === 0}<p class="text-sm text-gray-500">Loading Profiles…</p>{/if}
           {#each profiles as profile (`${profile.profile_id}@${profile.revision}`)}
             {@const selected = status.profile?.profile_id === profile.profile_id && status.profile?.revision === profile.revision}

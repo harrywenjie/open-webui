@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio, json, logging, os, urllib.error, urllib.request
+import time
 from contextlib import suppress
 from dataclasses import asdict
 from pathlib import Path
@@ -35,6 +36,32 @@ log=logging.getLogger(__name__)
 ALLOWED=frozenset({"STATUS","SET_MODE","SET_AUTONOMOUS_WRITING","TRACKER_PROJECTION","EVALUATION_WAIT","PROFILE_STATE","PROFILE_LIST","PROFILE_GET","PROFILE_PREVIEW","PROFILE_CREATE","PROFILE_REVISE","PROFILE_DUPLICATE","PROFILE_SELECT","PROFILE_ARCHIVE","PROFILE_DELETE","INSPECT_PAGE","WHY_REMEMBERED","ADD","CORRECT","EDIT","FORGET","REDACT","PIN","UNPIN","CURATOR_PREFERENCES_GET","SET_CURATOR_USER_DEFAULTS","SET_CURATOR_CHAT_OVERRIDE","RESET_CURATOR_CHAT_OVERRIDE"})
 FORBIDDEN=frozenset({"instance_id","owner_id","actor_id","role","authority","api_key","bridge_secret","source_token","qwen_api_key","client_capability","curator_max_in_flight","curator_queue_age_seconds","curator_execution_timeout_seconds","curator_debug_trace","curator_debug_capture_bytes"})
 ENABLED_MODES=frozenset({"NORMAL","READ_ONLY"})
+CONTINUITY_ACTIONS = {"CONTINUITY_CAPABILITIES", "CURATION_ADMIT", "CURATION_STATUS",
+                      "SELECTION_GET", "SELECTION_SET", "PUBLICATION_GET", "FORMAT_INSPECT"}
+
+
+def continuity_enabled():
+    return setting("DISSIPATIVE_CONTINUITY", "0") == "1"
+
+
+def _scope(owner, chat):
+    return dict(instance_id=setting("DISSIPATIVE_INSTANCE_ID"), owner_id=owner, chat_id=chat)
+
+
+_negotiated = None
+
+
+async def _continuity(owner, chat):
+    from open_webui.utils import dissipative_continuity as protocol
+
+    global _negotiated
+    scope = _scope(owner, chat)
+    key = (scope["instance_id"], setting("DISSIPATIVE_LOOPBACK_URL"), setting("DISSIPATIVE_API_KEY_FILE"))
+    if _negotiated is None or _negotiated[0] != key or _negotiated[1] < time.monotonic():
+        client = protocol.ContinuityChat(_client, scope, {}, {}, {})
+        capabilities = await asyncio.to_thread(client.negotiate)
+        _negotiated = (key, time.monotonic() + 30, capabilities)
+    return await protocol.synchronized(_client, scope)
 # Bound on the recent-chat window every reconciliation selects from.
 RECENT_CHAT_LIMIT=64
 # Phase 5H B1/D5: how long a send waits for the previous turn's evaluation, and the extra time the
@@ -136,6 +163,13 @@ def _client(path: str, body: dict, timeout: float=3) -> dict:
     base=setting("DISSIPATIVE_LOOPBACK_URL","http://127.0.0.1:18111").rstrip("/")
     if not base.startswith(("http://127.0.0.1:","http://localhost:")) or not api_key or not instance_id or len(instance_id)>128: raise RuntimeError("gateway configuration unavailable")
     request_body={**body,"api_version":"dissipative.client.v1","instance_id":instance_id,"client_capability":"dissipative-curator-redesign-phase4"}
+    if continuity_enabled():
+        from open_webui.utils.dissipative_continuity import PROTOCOL, TRANSPORT
+        if path == "/v1/memory/manage":
+            path = "/v1/continuity/manage"
+        if not path.startswith("/v1/continuity/"):
+            raise ChatMemoryClientError(409, "LEGACY_ROUTE_IN_CONTINUITY_MODE")
+        request_body.update(protocol=PROTOCOL, transport_version=TRANSPORT)
     req=urllib.request.Request(base+path,data=json.dumps(request_body,separators=(",",":"),ensure_ascii=False).encode(),method="POST",headers={"Authorization":"Bearer "+api_key,"Content-Type":"application/json"})
     try:
         with urllib.request.urlopen(req,timeout=timeout) as response: raw=response.read(1024*1024+1)
@@ -167,6 +201,10 @@ def _synchronizer() -> OpenWebUISourceSynchronizer:
 async def _synchronize_chat(chat,owner_id: str,chat_id: str) -> dict:
     record={"id":chat.id,"user_id":chat.user_id,"chat":chat.chat}
     try:
+        if continuity_enabled():
+            client = await _continuity(owner_id, chat_id)
+            return {"disposition": "CURRENT", "source_revision": client.snapshot["sourceRevision"],
+                    "branch_generation": client.snapshot["lineageRevision"], "active_count": len(client.ids)}
         result=await asyncio.to_thread(
             _synchronizer().synchronize,record,
             trusted_owner_id=owner_id,trusted_chat_id=chat_id,
@@ -195,10 +233,14 @@ async def prepare_for_chat(owner_id: str,chat_id: str,request_text: str,correlat
     """
     if not isinstance(request_text,str) or len(request_text)>8000: raise ChatMemoryProjectionError("request text exceeds bound")
     chat=await _owned_chat(owner_id,chat_id)
-    await _synchronize_chat(chat,owner_id,chat_id)
     body={"owner_id":owner_id,"chat_id":chat_id,"request_text":request_text,"correlation_id":correlation_id,"tracker_token_budget":256}
     if user_message_id: body["user_message_id"]=user_message_id
     if assistant_message_id: body["assistant_message_id"]=assistant_message_id
+    if continuity_enabled():
+        client = await _continuity(owner_id, chat_id)
+        result = await asyncio.to_thread(client.call, "prepare", **client.translated(body))
+        return result["memory"]
+    await _synchronize_chat(chat,owner_id,chat_id)
     try:
         await asyncio.to_thread(_internal_evaluation_wait,owner_id,chat_id,EVALUATION_WAIT_SECONDS)
     except Exception:
@@ -213,6 +255,9 @@ async def prepare_for_chat(owner_id: str,chat_id: str,request_text: str,correlat
 async def recall_for_chat(owner_id: str,chat_id: str,request: dict) -> dict:
     """Recall through server-derived Open WebUI ownership and instance scope."""
     chat=await _owned_chat(owner_id,chat_id)
+    if continuity_enabled():
+        client = await _continuity(owner_id, chat_id)
+        return await asyncio.to_thread(_client, "/v1/continuity/recall", {**client.translated(request), **client.scope}, 8)
     await _synchronize_chat(chat,owner_id,chat_id)
     body={**request,"owner_id":owner_id,"chat_id":chat_id}
     return await asyncio.to_thread(_client,"/v1/memory/recall",body,8)
@@ -232,7 +277,11 @@ async def fast_for_chat(owner_id: str, chat_id: str, action: str, request: dict)
     if action not in paths:
         raise ValueError('unknown FAST action')
     chat = await _owned_chat(owner_id, chat_id)
-    await _synchronize_chat(chat, owner_id, chat_id)
+    client = None
+    if continuity_enabled():
+        client = await _continuity(owner_id, chat_id)
+    else:
+        await _synchronize_chat(chat, owner_id, chat_id)
     body = {**request, 'owner_id': owner_id, 'chat_id': chat_id}
     body.pop('mode', None)
     body.pop('source_delta', None)
@@ -243,12 +292,36 @@ async def fast_for_chat(owner_id: str, chat_id: str, action: str, request: dict)
             raise ChatMemoryProjectionError('trusted current request unavailable')
         body['current_request'] = current['content']
     path, timeout = paths[action]
+    if client is not None:
+        # The assistant ID binds the delivery slot across streaming writes. The current
+        # user is an evidence source and must use Core's returned message identity.
+        slot = body.pop("assistant_message_id", None)
+        body = client.translated(body)
+        if slot not in client.ids:
+            raise ChatMemoryClientError(409, "ASSISTANT_OUTSIDE_ACTIVE_BRANCH")
+        rows = {r["message_id"]: r for r in client.host["messages"]}
+        user_id = request.get("current_message_id")
+        if rows[slot]["parent_message_id"] != user_id or rows[slot]["role"] != "assistant" or rows[user_id]["role"] != "user":
+            raise ChatMemoryClientError(409, "FAST_TURN_CHANGED")
+        if action == "answer":
+            body["current_request"] = rows[user_id]["content"]
+        body["assistant_message_id"] = slot
+        if "request_issued_at" in body:
+            # The v2 lexical boundary accepts integer JSON numbers only. Core's FAST clock
+            # accepts decimal text and recovers the exact timestamp of this server-issued attempt.
+            body["request_issued_at"] = str(body["request_issued_at"])
+        path = path.replace("/v1/memory/", "/v1/continuity/")
     return await asyncio.to_thread(_client, path, body, timeout)
 
 async def observe_finalized(owner_id: str,chat_id: str,assistant_message_id: str,receipt_ids: tuple[str,...]=()) -> dict:
     """Admit only the active persisted assistant from the authoritative chat."""
     try:
         chat=await _owned_chat(owner_id,chat_id)
+        if continuity_enabled():
+            client = await _continuity(owner_id, chat_id)
+            result = await asyncio.to_thread(client.admit, "ARCHIVE", None, assistant_message_id)
+            _observation_status.succeeded(owner_id, chat_id, result["disposition"])
+            return {"memory": result, "source_update": {"source_revision": client.snapshot["sourceRevision"]}}
         messages=((chat.chat or {}).get("history") or {}).get("messages") or {}
         assistant=messages.get(assistant_message_id) if isinstance(messages,dict) else None
         user_message_id=assistant.get("parentId") if isinstance(assistant,dict) else None
@@ -269,11 +342,20 @@ async def observe_finalized(owner_id: str,chat_id: str,assistant_message_id: str
 
 async def reconcile_hint(owner_id: str,chat_id: str) -> dict:
     """Treat edit/regeneration events as hints; the stored chat remains authoritative."""
+    if continuity_enabled():
+        client = await _continuity(owner_id, chat_id)
+        rows = client.host["messages"]
+        if rows and rows[-1]["role"] == "assistant" and rows[-1]["evidence_eligible"] and rows[-1]["memory_mode"] == "NORMAL":
+            return await asyncio.to_thread(client.admit, "ARCHIVE", None, rows[-1]["message_id"])
+        return {"disposition": "SYNCHRONIZED"}
     chat=await _owned_chat(owner_id,chat_id)
     return await _synchronize_chat(chat,owner_id,chat_id)
 
 async def delete_chat_memory(owner_id: str,chat_id: str) -> dict:
     """Tombstone a deleted chat after Open WebUI has removed its source row."""
+    if continuity_enabled():
+        from open_webui.utils.dissipative_continuity import delete
+        return await asyncio.to_thread(delete, _client, _scope(owner_id, chat_id))
     return await asyncio.to_thread(
         _synchronizer().delete,
         trusted_owner_id=owner_id,trusted_chat_id=chat_id,
@@ -345,6 +427,9 @@ async def _source_scope_available(chat) -> bool:
     escalates the loop from polling to the bounded reconciliation. A scope the
     service reports as tombstoned is deliberately excluded from recovery.
     """
+    if continuity_enabled():
+        await _continuity(chat.user_id, chat.id)
+        return True
     inventory=await asyncio.to_thread(_client,"/v1/memory/source/inventory",{"owner_id":chat.user_id,"chat_id":chat.id})
     return inventory.get("deleted") is not True and inventory.get("synchronized") is True
 
@@ -359,9 +444,13 @@ async def _reconcile_recent_chats() -> dict:
             if _memory_access_mode(chat) == "OFF":
                 continue
             try:
-                await _synchronize_chat(chat,chat.user_id,chat.id)
+                if continuity_enabled():
+                    client = await _continuity(chat.user_id, chat.id)
+                    await asyncio.to_thread(client.restore_archives)
+                else:
+                    await _synchronize_chat(chat,chat.user_id,chat.id)
                 status_value["synchronized"]+=1
-            except HTTPException:
+            except (HTTPException, ChatMemoryClientError, ChatMemoryProjectionError, OSError, RuntimeError):
                 status_value["failed"]+=1
             await asyncio.sleep(0)
         status_value["state"]="COMPLETE" if status_value["failed"] == 0 else "DEGRADED"
@@ -468,7 +557,7 @@ async def manage(form: ManagementRequest,user=Depends(get_verified_user),db: Asy
     # Ownership is the *authenticated session's*, never the payload's: an owner id in the payload is
     # rejected outright (`FORBIDDEN`), and `user.id` is what reaches the Core. That is also why the
     # router never reads a request field for it.
-    if action not in ALLOWED or set(form.payload)&FORBIDDEN: raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail="Invalid memory management request")
+    if (action not in ALLOWED and not (continuity_enabled() and action in CONTINUITY_ACTIONS)) or set(form.payload)&FORBIDDEN: raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail="Invalid memory management request")
     if action == "SET_AUTONOMOUS_WRITING" and type(form.payload.get("enabled")) is not bool:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail="Invalid autonomous writing preference")
     chat=await Chats.get_chat_by_id_and_user_id(form.chat_id,user.id,db=db)
@@ -477,7 +566,14 @@ async def manage(form: ManagementRequest,user=Depends(get_verified_user),db: Asy
     scope={"owner_id":user.id,"chat_id":form.chat_id}
     current_variables=dict(chat.variables or {})
     try:
-        if action == "PROFILE_STATE": await _synchronize_chat(chat,user.id,form.chat_id)
+        if continuity_enabled():
+            from open_webui.utils.dissipative_continuity import handle_action
+            client = await _continuity(user.id, form.chat_id)
+            if action == "CONTINUITY_CAPABILITIES":
+                return _negotiated[2]
+            if action in CONTINUITY_ACTIONS or action in {"PROFILE_SELECT", "PROFILE_STATE"}:
+                return await asyncio.to_thread(handle_action, client, action, form.payload)
+        elif action == "PROFILE_STATE": await _synchronize_chat(chat,user.id,form.chat_id)
         if action == "EVALUATION_WAIT":
             # B1/B3. The wait must not be granted forever just because a browser asked for it.
             requested=_positive_number_from_payload(form.payload.get("maximum_wait_seconds"),EVALUATION_WAIT_SECONDS)
@@ -495,10 +591,21 @@ async def manage(form: ManagementRequest,user=Depends(get_verified_user),db: Asy
                     await asyncio.to_thread(_client,"/v1/memory/manage",{"action":"SET_MODE","owner_id":user.id,"chat_id":form.chat_id,"mode":previous.get("mode","NORMAL"),"base_revision":result.get("config_revision")})
                 finally:
                     raise HTTPException(status_code=503,detail="Dissipative Memory mode persistence did not complete")
+            if continuity_enabled():
+                await _continuity(user.id, form.chat_id)
             return {**result,"client_previous_enabled_mode":_mode_variables(current_variables,target)["memory_previous_enabled_mode"]}
 
         result=await asyncio.to_thread(_client,"/v1/memory/manage",body)
         if action == "STATUS" and result.get("state") == "READY":
+            if continuity_enabled():
+                from open_webui.utils.dissipative_continuity import SELECTION
+                selected = (await asyncio.to_thread(client.call, "profile-selection/get", selection_version=SELECTION))["selection"]
+                result.update(continuity=True, selection=selected, profile_selection_revision=selected["selection_revision"])
+                result["authorization_revision"] = client.snapshot["authorizationRevision"]
+                if result.get("mode") != "OFF":
+                    result["coverage"] = await asyncio.to_thread(client.coverage)
+                if selected["mode"] == "NONE":
+                    result["profile"] = {"profile_id": None, "revision": None, "profile_hash": None, "display_name": "None"}
             if result.get("integration",{}).get("adapter") != "dissipative-curator-redesign-phase4":
                 return {"state":"INCOMPATIBLE","reason":"Dissipative Memory Core and Adapter versions do not match."}
             observation=_observation_status.get(user.id,form.chat_id)
@@ -508,6 +615,8 @@ async def manage(form: ManagementRequest,user=Depends(get_verified_user),db: Asy
                 if updated is None: raise HTTPException(status_code=503,detail="Dissipative Memory mode persistence did not complete")
             result={**result,"observation":observation,"client_previous_enabled_mode":synchronized["memory_previous_enabled_mode"],"source_liveness":_source_liveness_status()}
         return result
+    except ChatMemoryClientError as exc:
+        raise HTTPException(status_code=exc.status, detail=exc.code) from None
     except (OSError,KeyError,ValueError,RuntimeError,urllib.error.URLError,json.JSONDecodeError):
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,detail="Memory service unavailable") from None
 

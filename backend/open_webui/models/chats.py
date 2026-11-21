@@ -228,6 +228,8 @@ class Chat(Base):  # database table mapping for chat entity
     tasks = Column(JSON, nullable=True)
     summary = Column(Text, nullable=True)
     current_message_id = Column(Text, nullable=True)
+    # Server-owned continuity revisions. ChatModel and import/export forms omit this column.
+    dissipative_source_state = Column(JSON, nullable=True)
 
     last_read_at = Column(BigInteger, nullable=True)
     timer_at = Column(BigInteger, nullable=True)  # ns due time, set only while a timer chat waits to be claimed
