@@ -1,7 +1,10 @@
 <script lang="ts">
+	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import HotkeyHint from '$lib/components/common/HotkeyHint.svelte';
 	import { createEventDispatcher, getContext, onMount, tick } from 'svelte';
 
 	import { goto } from '$app/navigation';
+	import type { AppLayoutContext } from '$lib/types';
 	import { fade, slide } from 'svelte/transition';
 
 	import { getUsage } from '$lib/apis';
@@ -35,8 +38,16 @@
 	import { toast } from 'svelte-sonner';
 
 	const i18n = getContext('i18n');
+	const appLayout = getContext<AppLayoutContext | undefined>('appLayout');
 
 	export let show = false;
+	let confirmSignOut = false;
+	const signOut = async () => {
+		const res = await userSignOut();
+		localStorage.removeItem('token');
+		location.href = getLogoutRedirectUrl(res?.redirect_url);
+		show = false;
+	};
 	export let role = '';
 
 	export let profile = false;
@@ -101,6 +112,9 @@
 	on:keyup={(e) => {
 		if (e.key === 'Shift') shiftKey = false;
 	}}
+	on:blur={() => {
+		shiftKey = false;
+	}}
 />
 
 <UserStatusModal
@@ -118,6 +132,7 @@
 			{#if $user}
 				<div>
 					<button
+						role="menuitem"
 						class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-xs w-full hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none text-left"
 						type="button"
 						on:click={async () => {
@@ -165,30 +180,37 @@
 			{#if profile}
 				{#if $user?.status_emoji || $user?.status_message}
 					<div class="user-menu-status">
-						<button
-							class="w-full h-[1.6875rem] gap-2 rounded-xl px-2 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none text-xs flex items-center text-left"
-							type="button"
-							on:click={() => {
-								show = false;
-								showUserStatusModal = true;
-							}}
+						<div
+							class="user-menu-row flex items-center w-full rounded-xl hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition-colors"
 						>
-							{#if $user?.status_emoji}
-								<div class="self-center shrink-0 size-4.5 flex items-center justify-center">
-									<Emoji className="size-3.5" shortCode={$user?.status_emoji} />
-								</div>
-							{/if}
-
-							<Tooltip
-								content={$user?.status_message}
-								className="self-center line-clamp-2 flex-1 text-left"
+							<button
+								role="menuitem"
+								class="flex flex-1 min-w-0 h-[1.6875rem] gap-2 rounded-xl px-2 cursor-pointer select-none text-xs items-center text-left"
+								type="button"
+								on:click={() => {
+									show = false;
+									showUserStatusModal = true;
+								}}
 							>
-								{$user?.status_message}
-							</Tooltip>
+								{#if $user?.status_emoji}
+									<div class="self-center shrink-0 size-4.5 flex items-center justify-center">
+										<Emoji className="size-3.5" shortCode={$user?.status_emoji} />
+									</div>
+								{/if}
 
-							<div class="self-center">
+								<Tooltip
+									content={$user?.status_message}
+									className="self-center line-clamp-2 flex-1 text-left"
+								>
+									{$user?.status_message}
+								</Tooltip>
+							</button>
+
+							<div class="self-center mr-2">
 								<Tooltip content={$i18n.t('Clear status')}>
 									<button
+										role="menuitem"
+										aria-label={$i18n.t('Clear status')}
 										class="flex size-5 items-center justify-center"
 										type="button"
 										on:click={async (e) => {
@@ -213,11 +235,12 @@
 									</button>
 								</Tooltip>
 							</div>
-						</button>
+						</div>
 					</div>
 				{:else}
 					<div class="user-menu-status">
 						<button
+							role="menuitem"
 							class="w-full h-[1.6875rem] gap-2 rounded-xl px-2 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none text-xs flex items-center text-left"
 							type="button"
 							on:click={() => {
@@ -243,6 +266,7 @@
 					class="user-menu-row flex items-center w-full rounded-xl hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition-colors"
 				>
 					<a
+						role="menuitem"
 						href="/workspace"
 						draggable="false"
 						class="flex flex-1 min-w-0 h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none"
@@ -250,7 +274,9 @@
 							if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
 							e.preventDefault();
 							show = false;
-							goto('/workspace');
+							if (appLayout?.openPageTab)
+								appLayout.openPageTab({ href: '/workspace', label: $i18n.t('Workspace') });
+							else goto('/workspace');
 							if ($mobile) {
 								await tick();
 								showSidebar.set(false);
@@ -264,16 +290,20 @@
 					</a>
 					{#if shiftKey}
 						<Tooltip
-							content={isPinned('workspace')
+							content={pinnedItems.includes('workspace')
 								? $i18n.t('Unpin from Sidebar')
 								: $i18n.t('Pin to Sidebar')}
 						>
 							<button
+								aria-label={pinnedItems.includes('workspace')
+									? $i18n.t('Unpin from Sidebar')
+									: $i18n.t('Pin to Sidebar')}
+								role="menuitem"
 								type="button"
 								class="p-1 mr-1 rounded-lg hover:bg-gray-100/60 dark:hover:bg-gray-700/60 transition"
 								on:click|preventDefault|stopPropagation={() => togglePin('workspace')}
 							>
-								{#if isPinned('workspace')}
+								{#if pinnedItems.includes('workspace')}
 									<PinSlashIcon className="size-3.5" strokeWidth="1.5" />
 								{:else}
 									<PinIcon className="size-3.5" strokeWidth="1.5" />
@@ -289,6 +319,7 @@
 					class="user-menu-row flex items-center w-full rounded-xl hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition-colors"
 				>
 					<a
+						role="menuitem"
 						href="/notes"
 						draggable="false"
 						class="flex flex-1 min-w-0 h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none"
@@ -296,7 +327,9 @@
 							if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
 							e.preventDefault();
 							show = false;
-							goto('/notes');
+							if (appLayout?.openPageTab)
+								appLayout.openPageTab({ href: '/notes', label: $i18n.t('Notes') });
+							else goto('/notes');
 							if ($mobile) {
 								await tick();
 								showSidebar.set(false);
@@ -310,16 +343,20 @@
 					</a>
 					{#if shiftKey}
 						<Tooltip
-							content={isPinned('notes')
+							content={pinnedItems.includes('notes')
 								? $i18n.t('Unpin from Sidebar')
 								: $i18n.t('Pin to Sidebar')}
 						>
 							<button
+								aria-label={pinnedItems.includes('notes')
+									? $i18n.t('Unpin from Sidebar')
+									: $i18n.t('Pin to Sidebar')}
+								role="menuitem"
 								type="button"
 								class="p-1 mr-1 rounded-lg hover:bg-gray-100/60 dark:hover:bg-gray-700/60 transition"
 								on:click|preventDefault|stopPropagation={() => togglePin('notes')}
 							>
-								{#if isPinned('notes')}
+								{#if pinnedItems.includes('notes')}
 									<PinSlashIcon className="size-3.5" strokeWidth="1.5" />
 								{:else}
 									<PinIcon className="size-3.5" strokeWidth="1.5" />
@@ -335,6 +372,7 @@
 					class="user-menu-row flex items-center w-full rounded-xl hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition-colors"
 				>
 					<a
+						role="menuitem"
 						href="/calendar"
 						draggable="false"
 						class="flex flex-1 min-w-0 h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none"
@@ -342,7 +380,9 @@
 							if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
 							e.preventDefault();
 							show = false;
-							goto('/calendar');
+							if (appLayout?.openPageTab)
+								appLayout.openPageTab({ href: '/calendar', label: $i18n.t('Calendar') });
+							else goto('/calendar');
 							if ($mobile) {
 								await tick();
 								showSidebar.set(false);
@@ -356,16 +396,20 @@
 					</a>
 					{#if shiftKey}
 						<Tooltip
-							content={isPinned('calendar')
+							content={pinnedItems.includes('calendar')
 								? $i18n.t('Unpin from Sidebar')
 								: $i18n.t('Pin to Sidebar')}
 						>
 							<button
+								aria-label={pinnedItems.includes('calendar')
+									? $i18n.t('Unpin from Sidebar')
+									: $i18n.t('Pin to Sidebar')}
+								role="menuitem"
 								type="button"
 								class="p-1 mr-1 rounded-lg hover:bg-gray-100/60 dark:hover:bg-gray-700/60 transition"
 								on:click|preventDefault|stopPropagation={() => togglePin('calendar')}
 							>
-								{#if isPinned('calendar')}
+								{#if pinnedItems.includes('calendar')}
 									<PinSlashIcon className="size-3.5" strokeWidth="1.5" />
 								{:else}
 									<PinIcon className="size-3.5" strokeWidth="1.5" />
@@ -381,6 +425,7 @@
 					class="user-menu-row flex items-center w-full rounded-xl hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition-colors"
 				>
 					<a
+						role="menuitem"
 						href="/automations"
 						draggable="false"
 						class="flex flex-1 min-w-0 h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none"
@@ -388,7 +433,9 @@
 							if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
 							e.preventDefault();
 							show = false;
-							goto('/automations');
+							if (appLayout?.openPageTab)
+								appLayout.openPageTab({ href: '/automations', label: $i18n.t('Automations') });
+							else goto('/automations');
 							if ($mobile) {
 								await tick();
 								showSidebar.set(false);
@@ -402,16 +449,20 @@
 					</a>
 					{#if shiftKey}
 						<Tooltip
-							content={isPinned('automations')
+							content={pinnedItems.includes('automations')
 								? $i18n.t('Unpin from Sidebar')
 								: $i18n.t('Pin to Sidebar')}
 						>
 							<button
+								aria-label={pinnedItems.includes('automations')
+									? $i18n.t('Unpin from Sidebar')
+									: $i18n.t('Pin to Sidebar')}
+								role="menuitem"
 								type="button"
 								class="p-1 mr-1 rounded-lg hover:bg-gray-100/60 dark:hover:bg-gray-700/60 transition"
 								on:click|preventDefault|stopPropagation={() => togglePin('automations')}
 							>
-								{#if isPinned('automations')}
+								{#if pinnedItems.includes('automations')}
 									<PinSlashIcon className="size-3.5" strokeWidth="1.5" />
 								{:else}
 									<PinIcon className="size-3.5" strokeWidth="1.5" />
@@ -427,6 +478,7 @@
 					class="user-menu-row flex items-center w-full rounded-xl hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition-colors"
 				>
 					<a
+						role="menuitem"
 						href="/playground"
 						draggable="false"
 						class="flex flex-1 min-w-0 h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none"
@@ -434,7 +486,9 @@
 							if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
 							e.preventDefault();
 							show = false;
-							goto('/playground');
+							if (appLayout?.openPageTab)
+								appLayout.openPageTab({ href: '/playground', label: $i18n.t('Playground') });
+							else goto('/playground');
 							if ($mobile) {
 								await tick();
 								showSidebar.set(false);
@@ -448,16 +502,20 @@
 					</a>
 					{#if shiftKey}
 						<Tooltip
-							content={isPinned('playground')
+							content={pinnedItems.includes('playground')
 								? $i18n.t('Unpin from Sidebar')
 								: $i18n.t('Pin to Sidebar')}
 						>
 							<button
+								aria-label={pinnedItems.includes('playground')
+									? $i18n.t('Unpin from Sidebar')
+									: $i18n.t('Pin to Sidebar')}
+								role="menuitem"
 								type="button"
 								class="p-1 mr-1 rounded-lg hover:bg-gray-100/60 dark:hover:bg-gray-700/60 transition"
 								on:click|preventDefault|stopPropagation={() => togglePin('playground')}
 							>
-								{#if isPinned('playground')}
+								{#if pinnedItems.includes('playground')}
 									<PinSlashIcon className="size-3.5" strokeWidth="1.5" />
 								{:else}
 									<PinIcon className="size-3.5" strokeWidth="1.5" />
@@ -475,6 +533,7 @@
 
 				{#if $user?.role === 'admin'}
 					<a
+						role="menuitem"
 						href="https://docs.openwebui.com"
 						target="_blank"
 						draggable="false"
@@ -492,6 +551,7 @@
 
 					<!-- Releases -->
 					<a
+						role="menuitem"
 						href="https://github.com/open-webui/open-webui/releases"
 						target="_blank"
 						draggable="false"
@@ -509,6 +569,7 @@
 				{/if}
 
 				<button
+					role="menuitem"
 					class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[0.8125rem] w-full hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
 					type="button"
 					id="chat-share-button"
@@ -526,6 +587,7 @@
 						<KeyIcon className="size-3.5" />
 					</div>
 					<div class=" self-center truncate">{$i18n.t('Keyboard')}</div>
+					<HotkeyHint name="showShortcuts" className="ms-auto" />
 				</button>
 			{/if}
 
@@ -533,6 +595,7 @@
 
 			{#if role === 'admin'}
 				<a
+					role="menuitem"
 					href="/admin"
 					draggable="false"
 					class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[0.8125rem] w-full hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
@@ -557,6 +620,7 @@
 			{/if}
 
 			<button
+				role="menuitem"
 				class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[0.8125rem] w-full hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
 				type="button"
 				on:click={async () => {
@@ -574,17 +638,17 @@
 					<Settings className="size-3.5" strokeWidth="1.5" />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Settings')}</div>
+				<HotkeyHint name="openSettings" className="ms-auto" />
 			</button>
 
 			<button
+				role="menuitem"
 				class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[0.8125rem] w-full hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
 				type="button"
 				on:click={async () => {
-					const res = await userSignOut();
-					localStorage.removeItem('token');
-
-					location.href = getLogoutRedirectUrl(res?.redirect_url);
-					show = false;
+					const { hasChatViewDrafts } = await import('$lib/stores/chatViewStates');
+					if (hasChatViewDrafts()) confirmSignOut = true;
+					else await signOut();
 				}}
 			>
 				<div class="self-center">
@@ -595,3 +659,11 @@
 		</DropdownMenu>
 	</div>
 </Dropdown>
+
+<ConfirmDialog
+	bind:show={confirmSignOut}
+	title={$i18n.t('Unsaved changes')}
+	message={$i18n.t('Discard unsaved file edits and sign out?')}
+	confirmLabel={$i18n.t('Sign Out')}
+	on:confirm={signOut}
+/>

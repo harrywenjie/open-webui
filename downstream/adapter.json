@@ -1,9 +1,9 @@
 {
-  "adapter_version": "dissipative-adapter-4.20",
+  "adapter_version": "dissipative-adapter-4.21",
   "upstream": {
-    "version": "0.11.4",
-    "tag": "v0.11.4",
-    "commit": "8bd8b4fac5e059578ac0c74b3c18d11139f88b7d"
+    "version": "0.13.4",
+    "ref": "refs/heads/main",
+    "commit": "0666e59d26a4d056e0bacee41742486badd71cf8"
   },
   "repository": "https://github.com/harrywenjie/open-webui.git",
   "patched_paths": [

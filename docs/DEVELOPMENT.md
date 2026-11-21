@@ -4,7 +4,7 @@
 
 2026-11-21，维护者决定把此 fork 同步到官方 `open-webui/open-webui:main`，接入新版 Dissipative 连续记忆。此次切换仅保留用户登录所需信息，允许重新登录，旧聊天和派生记忆从空库开始，故障时向前修复。所有升级均须保留自定义图标与实例主题。[仓库规则](../AGENTS.md#所有升级和更新均须保留自定义图标与主题) · [本次计划](development/open-webui-upgrade-2026-11.md)
 
-最近核实的产品源码为 `codex/dissipative-online` 上的 `5a3026ed431bd2f01e3b47909a77dd871bf76c7b`，对应 Open WebUI `0.11.4` / Adapter `4.20`。11 月 21 日记录的官方主线候选为 `0666e59`（`0.13.4`），开发开工时重新冻结。计划及文档迁移已交付；上游合并、候选 wheel、主题与新记忆的组合验证、身份迁移和生产窗口均待执行。[下游清单](../downstream/adapter.json) · [上游固定提交](https://github.com/open-webui/open-webui/commit/0666e59d26a4d056e0bacee41742486badd71cf8)
+2026-11-21 开工时从远端核实已发布分支 `codex/dissipative-online` 为 `3ae22bd845767de1ed201498fe2810ffa3daa511`，其产品基线为 `5a3026ed4`（0.11.4 / Adapter 4.20）。隔离候选 `codex/dissipative-upgrade-20261121` 已合并当天冻结的官方主线 `0666e59d26a4d056e0bacee41742486badd71cf8`（0.13.4），适配器标识为 4.21。已核对源码图标、主题生成物及补丁路径。候选构建、组合验收、登录演练和生产窗口分别登记。[同步记录](../downstream/upgrade-20261121.md) · [下游清单](../downstream/adapter.json)
 
 ## 下一任务卡
 

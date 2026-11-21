@@ -41,7 +41,8 @@
 			id: data.id,
 			name: data.name,
 			meta: data.meta,
-			content: data.content
+			content: data.content,
+			commit_message: data.commit_message
 		}).catch((error) => {
 			toast.error(`${error}`);
 			return null;
@@ -50,21 +51,14 @@
 		if (res) {
 			toast.success($i18n.t('Function created successfully'));
 			functions.set(await getFunctions(localStorage.token));
-			models.set(
-				await getModels(
-					localStorage.token,
-					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null),
-					false,
-					true
-				)
-			);
+			models.set(await getModels(localStorage.token, false, true));
 
 			await goto('/admin/functions');
 		}
 	};
 
 	onMount(() => {
-		if (!$config?.features?.enable_plugins) {
+		if (!$config?.features?.enable_functions) {
 			goto('/admin', { replaceState: true });
 			return;
 		}
@@ -101,9 +95,7 @@
 				meta={func?.meta ?? { description: '' }}
 				content={func?.content ?? ''}
 				{clone}
-				onSave={(value) => {
-					saveHandler(value);
-				}}
+				onSave={saveHandler}
 			/>
 		</div>
 	{/key}

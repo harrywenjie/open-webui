@@ -9,12 +9,12 @@
 	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
 	import LanguageModeSelect from '$lib/components/common/LanguageModeSelect.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import { WEBUI_BUILD_HASH, WEBUI_VERSION } from '$lib/constants';
+	import BuildVersion from '$lib/components/common/BuildVersion.svelte';
+	import { WEBUI_BUILD_CHANNEL, WEBUI_VERSION } from '$lib/constants';
 	import { banners as _banners, config, showChangelog } from '$lib/stores';
 	import type { Banner } from '$lib/types';
 	import { compareVersion } from '$lib/utils';
-	import { onMount, getContext } from 'svelte';
+	import { onMount, getContext, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Banners from './Interface/Banners.svelte';
@@ -22,6 +22,7 @@
 	import AdminSettingField from './AdminSettingField.svelte';
 	import AdminSettingRow from './AdminSettingRow.svelte';
 	import AdminSettingSection from './AdminSettingSection.svelte';
+	import AdminSettingSaveButton from './AdminSettingSaveButton.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import I18nSettings from './I18nSettings.svelte';
 	import { updateI18n } from '$lib/i18n';
@@ -45,6 +46,42 @@
 
 	let banners: Banner[] = [];
 	let bannerLocale = '';
+
+	let savedConfig: Record<string, any> | null = null;
+	$: settings = {
+		...adminConfig,
+		DEFAULT_INTERFACE_SETTINGS: defaultInterfaceSettings,
+		I18N: uiI18nEntries,
+		BANNERS: banners
+	};
+	$: settingLabels = {
+		ENABLE_COMMUNITY_SHARING: $i18n.t('settings.admin.general.communitySharing.label'),
+		ENABLE_MESSAGE_RATING: $i18n.t('settings.admin.general.messageRating.label'),
+		ENABLE_FOLDERS: $i18n.t('settings.admin.general.folders.label'),
+		FOLDER_MAX_FILE_COUNT: $i18n.t('settings.admin.general.folderMaxFileCount.label'),
+		ENABLE_MEMORIES: $i18n.t('settings.admin.general.memories.label'),
+		ENABLE_MEMORY_SYSTEM_CONTEXT: $i18n.t('settings.admin.general.memorySystemContext.label'),
+		ENABLE_SKILL_LAZY_LOADING: $i18n.t('settings.admin.general.skillLazyLoading.label'),
+		SKILL_CONTENT_MAX_CHARS: $i18n.t('settings.admin.general.skillContentMaxChars.label'),
+		SKILL_PREVIEW_MAX_CHARS: $i18n.t('settings.admin.general.skillPreviewMaxChars.label'),
+		VIEW_CHAT_MAX_CHARS: $i18n.t('settings.admin.general.viewChatMaxChars.label'),
+		ENABLE_NOTES: $i18n.t('settings.admin.general.notes.label'),
+		ENABLE_COMMENTS: $i18n.t('settings.admin.general.comments.label'),
+		ENABLE_NOTIFICATIONS: $i18n.t('settings.admin.general.notifications.label'),
+		ENABLE_CHANNELS: $i18n.t('settings.admin.general.channels.label'),
+		ENABLE_ENCRYPTED_CHANNELS: $i18n.t('settings.admin.general.encryptedChannels.label'),
+		CHANNEL_MODEL_RESPONSE_MODE: $i18n.t('settings.admin.general.modelResponseMode.label'),
+		ENABLE_APPS: $i18n.t('settings.admin.general.apps.label'),
+		ENABLE_CALENDAR: $i18n.t('settings.admin.general.calendar.label'),
+		ENABLE_AUTOMATIONS: $i18n.t('settings.admin.general.automations.label'),
+		ENABLE_USER_WEBHOOKS: $i18n.t('settings.admin.general.userWebhooks.label'),
+		ENABLE_USER_STATUS: $i18n.t('settings.admin.general.userStatus.label'),
+		RESPONSE_WATERMARK: $i18n.t('settings.admin.general.responseWatermark.label'),
+		WEBUI_URL: $i18n.t('settings.admin.general.webuiUrl.label'),
+		I18N: $i18n.t('settings.admin.general.translations.uiTranslations.label'),
+		DEFAULT_INTERFACE_SETTINGS: $i18n.t('Default Interface Settings'),
+		BANNERS: $i18n.t('settings.admin.general.banners.label')
+	};
 	const inputClass =
 		'w-full h-7 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 	const textareaClass =
@@ -84,12 +121,21 @@
 			const cleaned = entriesToI18n(uiI18nEntries);
 			const res = await updateAdminConfig(localStorage.token, {
 				...adminConfig,
+				SKILL_CONTENT_MAX_CHARS: adminConfig.SKILL_CONTENT_MAX_CHARS ?? null,
+				SKILL_PREVIEW_MAX_CHARS: adminConfig.SKILL_PREVIEW_MAX_CHARS ?? null,
+				VIEW_CHAT_MAX_CHARS: adminConfig.VIEW_CHAT_MAX_CHARS ?? null,
 				DEFAULT_INTERFACE_SETTINGS: defaultInterfaceSettings,
 				I18N: cleaned
 			});
 			if (!res) throw new Error($i18n.t('Failed to update settings'));
+			if (res.sessions_revoked) {
+				localStorage.removeItem('token');
+				window.location.href = '/auth?state=logout&form=signin';
+				return;
+			}
 			await updateI18n(res.I18N ?? cleaned);
 			await updateBanners();
+			savedConfig = structuredClone(settings);
 			await config.set(await getBackendConfig());
 			saveHandler();
 		} catch (error) {
@@ -112,7 +158,10 @@
 
 		banners = [...$_banners];
 
-		if ($config?.features?.enable_version_update_check) {
+		await tick();
+		savedConfig = structuredClone(settings);
+
+		if (WEBUI_BUILD_CHANNEL === 'main' && $config?.features?.enable_version_update_check) {
 			checkForVersionUpdates();
 		}
 	});
@@ -137,9 +186,9 @@
 							{$i18n.t('settings.admin.general.version.label')}
 						</div>
 						<div class="mt-1 flex flex-wrap gap-x-1 text-gray-700 dark:text-gray-200">
-							<Tooltip content={WEBUI_BUILD_HASH}>v{WEBUI_VERSION}</Tooltip>
+							<BuildVersion />
 
-							{#if $config?.features?.enable_version_update_check}
+							{#if WEBUI_BUILD_CHANNEL === 'main' && $config?.features?.enable_version_update_check}
 								{#if version.latest === null}
 									<span class="text-gray-500 dark:text-gray-500"
 										>{$i18n.t('Could not check for updates')}</span
@@ -171,7 +220,7 @@
 						</button>
 					</div>
 
-					{#if $config?.features?.enable_version_update_check}
+					{#if WEBUI_BUILD_CHANNEL === 'main' && $config?.features?.enable_version_update_check}
 						<button
 							class="shrink-0 text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
 							type="button"
@@ -301,8 +350,10 @@
 					<AdminSettingField
 						label={$i18n.t('settings.admin.general.folderMaxFileCount.label')}
 						description={$i18n.t('settings.admin.general.folderMaxFileCount.description')}
+						forId="folder-max-file-count"
 					>
 						<input
+							id="folder-max-file-count"
 							class={inputClass}
 							type="number"
 							min="0"
@@ -333,11 +384,77 @@
 					</AdminSettingRow>
 				{/if}
 				<AdminSettingRow
+					label={$i18n.t('settings.admin.general.skillLazyLoading.label')}
+					description={$i18n.t('settings.admin.general.skillLazyLoading.description')}
+					let:labelId
+				>
+					<Switch bind:state={adminConfig.ENABLE_SKILL_LAZY_LOADING} ariaLabelledbyId={labelId} />
+				</AdminSettingRow>
+				<AdminSettingField
+					forId="skill-content-max-chars"
+					label={$i18n.t('settings.admin.general.skillContentMaxChars.label')}
+					description={$i18n.t('settings.admin.general.skillContentMaxChars.description')}
+				>
+					<input
+						id="skill-content-max-chars"
+						class={inputClass}
+						type="number"
+						min="1"
+						step="1"
+						placeholder={$i18n.t('Default')}
+						bind:value={adminConfig.SKILL_CONTENT_MAX_CHARS}
+					/>
+				</AdminSettingField>
+				<AdminSettingField
+					forId="skill-preview-max-chars"
+					label={$i18n.t('settings.admin.general.skillPreviewMaxChars.label')}
+					description={$i18n.t('settings.admin.general.skillPreviewMaxChars.description')}
+				>
+					<input
+						id="skill-preview-max-chars"
+						class={inputClass}
+						type="number"
+						min="1"
+						step="1"
+						placeholder={$i18n.t('Default')}
+						bind:value={adminConfig.SKILL_PREVIEW_MAX_CHARS}
+					/>
+				</AdminSettingField>
+				<AdminSettingField
+					forId="view-chat-max-chars"
+					label={$i18n.t('settings.admin.general.viewChatMaxChars.label')}
+					description={$i18n.t('settings.admin.general.viewChatMaxChars.description')}
+				>
+					<input
+						id="view-chat-max-chars"
+						class={inputClass}
+						type="number"
+						min="1"
+						step="1"
+						placeholder={$i18n.t('No limit')}
+						bind:value={adminConfig.VIEW_CHAT_MAX_CHARS}
+					/>
+				</AdminSettingField>
+				<AdminSettingRow
 					label={$i18n.t('settings.admin.general.notes.label')}
 					description={$i18n.t('settings.admin.general.notes.description')}
 					let:labelId
 				>
 					<Switch bind:state={adminConfig.ENABLE_NOTES} ariaLabelledbyId={labelId} />
+				</AdminSettingRow>
+				<AdminSettingRow
+					label={$i18n.t('settings.admin.general.comments.label')}
+					description={$i18n.t('settings.admin.general.comments.description')}
+					let:labelId
+				>
+					<Switch bind:state={adminConfig.ENABLE_COMMENTS} ariaLabelledbyId={labelId} />
+				</AdminSettingRow>
+				<AdminSettingRow
+					label={$i18n.t('settings.admin.general.notifications.label')}
+					description={$i18n.t('settings.admin.general.notifications.description')}
+					let:labelId
+				>
+					<Switch bind:state={adminConfig.ENABLE_NOTIFICATIONS} ariaLabelledbyId={labelId} />
 				</AdminSettingRow>
 				<AdminSettingRow
 					label={$i18n.t('settings.admin.general.channels.label')}
@@ -347,6 +464,14 @@
 					<Switch bind:state={adminConfig.ENABLE_CHANNELS} ariaLabelledbyId={labelId} />
 				</AdminSettingRow>
 				{#if adminConfig.ENABLE_CHANNELS}
+					<AdminSettingRow
+						label={$i18n.t('settings.admin.general.encryptedChannels.label')}
+						description={$i18n.t('settings.admin.general.encryptedChannels.description')}
+						labelClassName="text-gray-500 dark:text-gray-500"
+						let:labelId
+					>
+						<Switch bind:state={adminConfig.ENABLE_ENCRYPTED_CHANNELS} ariaLabelledbyId={labelId} />
+					</AdminSettingRow>
 					<AdminSettingRow
 						label={$i18n.t('settings.admin.general.modelResponseMode.label')}
 						description={$i18n.t('settings.admin.general.modelResponseMode.description')}
@@ -362,6 +487,13 @@
 						</SettingsSelect>
 					</AdminSettingRow>
 				{/if}
+				<AdminSettingRow
+					label={$i18n.t('settings.admin.general.apps.label')}
+					description={$i18n.t('settings.admin.general.apps.description')}
+					let:labelId
+				>
+					<Switch bind:state={adminConfig.ENABLE_APPS} ariaLabelledbyId={labelId} />
+				</AdminSettingRow>
 				<AdminSettingRow
 					label={$i18n.t('settings.admin.general.calendar.label')}
 					description={$i18n.t('settings.admin.general.calendar.description')}
@@ -399,14 +531,17 @@
 						className={textareaClass}
 						placeholder={$i18n.t('Enter a watermark for the response. Leave empty for none.')}
 						bind:value={adminConfig.RESPONSE_WATERMARK}
+						maxSize={200}
 					/>
 				</AdminSettingField>
 
 				<AdminSettingField
 					label={$i18n.t('settings.admin.general.webuiUrl.label')}
 					description={$i18n.t('settings.admin.general.webuiUrl.description')}
+					forId="webui-url"
 				>
 					<input
+						id="webui-url"
 						class={inputClass}
 						type="text"
 						placeholder={`e.g.) "http://localhost:3000"`}
@@ -523,12 +658,6 @@
 	</div>
 
 	<div class="flex justify-end pt-6 text-sm font-normal">
-		<button
-			class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
-			type="submit"
-			disabled={saving}
-		>
-			{$i18n.t('Save')}
-		</button>
+		<AdminSettingSaveButton {settings} {savedConfig} labels={settingLabels} disabled={saving} />
 	</div>
 </form>

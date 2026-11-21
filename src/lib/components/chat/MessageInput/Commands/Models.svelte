@@ -4,15 +4,17 @@
 	import { createEventDispatcher, onDestroy, onMount } from 'svelte';
 	import { tick, getContext } from 'svelte';
 
-	import { models } from '$lib/stores';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import {
 		resolveLocalizedModelDescription,
 		resolveLocalizedModelName
 	} from '$lib/utils/localizedContent';
+	import { getChatContext } from '$lib/components/chat/context';
 
-	const i18n = getContext('i18n');
+	const { models } = getChatContext();
+
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let query = '';
 	export let onSelect = (e) => {};
@@ -20,7 +22,7 @@
 	let selectedIdx = 0;
 	export let filteredItems = [];
 
-	let fuse = new Fuse(
+	$: fuse = new Fuse(
 		$models
 			.filter((model) => !model?.info?.meta?.hidden)
 			.map((model) => {

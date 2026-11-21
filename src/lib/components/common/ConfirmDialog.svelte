@@ -6,7 +6,7 @@
 	import { settings } from '$lib/stores';
 	import { matchKeybinding, Shortcut } from '$lib/shortcuts';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 	const dispatch = createEventDispatcher();
 
 	import { fade } from 'svelte/transition';
@@ -18,8 +18,10 @@
 	export let title = '';
 	export let message = '';
 
-	export let cancelLabel = $i18n.t('Cancel');
-	export let confirmLabel = $i18n.t('Confirm');
+	export let cancelLabel: string | undefined = undefined;
+	export let confirmLabel: string | undefined = undefined;
+	export let confirmFirst = false;
+	export let primaryAction: 'confirm' | 'cancel' = 'confirm';
 
 	export let onConfirm = () => {};
 
@@ -41,6 +43,28 @@
 	let mounted = false;
 
 	let focusTrap: FocusTrap.FocusTrap | null = null;
+	let returnFocusTarget: HTMLElement | null = null;
+
+	const handleFocusOutside = (event: FocusEvent) => {
+		if (
+			event.target instanceof HTMLElement &&
+			!modalElement?.contains(event.target) &&
+			!event.target.closest('[role="menu"], [role="listbox"]')
+		) {
+			returnFocusTarget = event.target;
+		}
+	};
+
+	const getReturnFocus = (previous: HTMLElement | SVGElement) =>
+		previous.isConnected ? previous : (returnFocusTarget ?? previous);
+
+	let previousOverflow: string | null = null;
+	const restoreOverflow = () => {
+		if (previousOverflow !== null) {
+			document.body.style.overflow = previousOverflow;
+			previousOverflow = null;
+		}
+	};
 
 	const init = () => {
 		_inputValue = inputValue;
@@ -86,24 +110,30 @@
 	$: if (mounted) {
 		if (show && modalElement) {
 			document.body.appendChild(modalElement);
-			focusTrap = FocusTrap.createFocusTrap(modalElement);
+			returnFocusTarget = null;
+			focusTrap = FocusTrap.createFocusTrap(modalElement, { setReturnFocus: getReturnFocus });
 			focusTrap.activate();
 
 			window.addEventListener('keydown', handleKeyDown);
+			window.addEventListener('focusin', handleFocusOutside, true);
+			previousOverflow = document.body.style.overflow;
 			document.body.style.overflow = 'hidden';
 		} else if (modalElement) {
 			focusTrap.deactivate();
 
 			window.removeEventListener('keydown', handleKeyDown);
+			window.removeEventListener('focusin', handleFocusOutside, true);
 			document.body.removeChild(modalElement);
 
-			document.body.style.overflow = 'unset';
+			restoreOverflow();
 		}
 	}
 
 	onDestroy(() => {
 		show = false;
+		restoreOverflow();
 		window.removeEventListener('keydown', handleKeyDown);
+		window.removeEventListener('focusin', handleFocusOutside, true);
 		if (focusTrap) {
 			focusTrap.deactivate();
 		}
@@ -136,7 +166,7 @@
 			}}
 		>
 			<div class="px-5 py-5 flex flex-col">
-				<div class="text-base font-medium dark:text-gray-200 mb-2.5">
+				<div class="text-sm font-medium dark:text-gray-200 mb-2.5">
 					{#if title !== ''}
 						{title}
 					{:else}
@@ -190,24 +220,20 @@
 				</slot>
 
 				<div class="mt-5 flex justify-between gap-1.5">
-					<button
-						class="text-sm bg-gray-100 hover:bg-gray-100/70 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-850/60 dark:text-white font-normal w-full py-1.5 rounded-full transition"
-						on:click={() => {
-							cancelHandler();
-						}}
-						type="button"
-					>
-						{cancelLabel}
-					</button>
-					<button
-						class="text-sm bg-gray-900 hover:bg-gray-900/90 text-gray-100 dark:bg-gray-100 dark:hover:bg-gray-100/90 dark:text-gray-800 font-normal w-full py-1.5 rounded-full transition"
-						on:click={() => {
-							confirmHandler();
-						}}
-						type="button"
-					>
-						{confirmLabel}
-					</button>
+					{#each confirmFirst ? ['confirm', 'cancel'] : ['cancel', 'confirm'] as action (action)}
+						<button
+							class="flex h-7 w-full items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 {action ===
+							primaryAction
+								? 'bg-gray-900 text-white hover:bg-black dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white'
+								: 'bg-gray-100 hover:bg-gray-100/70 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-850/60 dark:text-white'}"
+							on:click={action === 'confirm' ? confirmHandler : cancelHandler}
+							type="button"
+						>
+							{action === 'confirm'
+								? (confirmLabel ?? $i18n.t('Confirm'))
+								: (cancelLabel ?? $i18n.t('Cancel'))}
+						</button>
+					{/each}
 				</div>
 			</div>
 		</div>
