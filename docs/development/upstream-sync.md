@@ -96,6 +96,6 @@ python scripts/test.py --all
 | 图标 | 在 fork 根运行 `python downstream/verify_branding.py --wheel <wheel>`。安装后用 `--installed <open_webui目录>`，启动后用 `--url <站点>`。浏览器核实 favicon、Apple、PWA 清单和应用 logo。 |
 | 主题与登录 | 用实际安装了候选 wheel 的解释器运行 [rehearse_install.py](../../downstream/tests/rehearse_install.py)，参数见 `--help`。验证 Dark、OLED Dark、Light、Her、System 明暗、聊天 HUD 和重启首屏。登录及数据范围按本次发布决定。 |
 | 记忆与权限 | 从 [qualify_continuity.py](../../downstream/tests/qualify_continuity.py) 验证普通对话、分支/编辑/删除、跨用户隔离、Filter/Events/Tool、来源同步、Profile、FAST 取消/发布、重启回读。以独立 WebUI Core 和隔离库演练，真实模型使用获准的合成输入。 |
-| 现场 | 单独授权后核对真实登录方式、发布配置与主机身份。验证实装图标和主题、真实对话、重启、备份、开放后的观察及相邻服务独立性。实装完成才更新安装指针。 |
+| 现场 | 单独授权后核对真实登录方式、发布配置与主机身份。按当次决定核验数据恢复范围，有备份要求时验证约定的备份。验证实装图标和主题、真实对话、重启、开放后的观察及相邻服务独立性。实装完成才更新安装指针。 |
 
-验收通过后从主工作树用 `git merge --ff-only <候选提交>` 合入 `main`，复核 fork 与上游两个祖先，再推送并比对远端 SHA。临时工作树在安全点按全局回收规则收尾。2026-11-21 的“仅迁登录、专用 schema 34 从空库启动、向前修复”属于该次 Mac 窗口。未来的数据迁移与恢复策略须由当次任务确定。[当次决定](open-webui-upgrade-2026-11.md#登录信息最小迁移) · [当次现场验收](https://github.com/harrywenjie/PrivateOperations/blob/340e5c62f61a51d2399ad9390052abb8b183b644/servers/192.168.1.60/reports/2026-11-21-webui-422-cutover.md)
+验收通过后从主工作树用 `git merge --ff-only <候选提交>` 合入 `main`，复核 fork 与上游两个祖先，再推送并比对远端 SHA。临时工作树在安全点按全局回收规则收尾。2026-11-21 的“仅迁登录、专用 schema 34 从空库启动、向前修复”属于该次 Mac 窗口。调查该实装的恢复能力时，同时核对窗口后的主机决定。未来的数据迁移与恢复策略须由当次任务确定。[当次登录决定](open-webui-upgrade-2026-11.md#登录信息最小迁移) · [实装与后续恢复边界](../DEVELOPMENT.md#当前状态)
